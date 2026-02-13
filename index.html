@@ -382,10 +382,13 @@
 </div>
 
 <div id="bottomActions">
+  <button id="saveBtn" type="button">Save</button>
+  <button id="loadBtn" type="button">Load</button>
   <button id="toggleHintsBtn" type="button" title="Help and tool guide">?</button>
   <button id="resetBtn" type="button">Reset</button>
   <button id="clearBtn" type="button">Clear</button>
   <button id="exportBtn" type="button" class="primary">Export OBJ</button>
+  <input id="loadProjectFile" type="file" accept=".json,.mktrack,.mktrack.json,application/json" style="display:none"/>
 </div>
 
 <div id="helpModal" class="helpModal hidden" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
@@ -1967,6 +1970,9 @@
   const ctrlCard = $('ctrlCard');
   const ctrlToggleBtn = $('ctrlToggle');
   const genQuickBtn = $('genQuickBtn');
+  const saveBtn = $('saveBtn');
+  const loadBtn = $('loadBtn');
+  const loadProjectFile = $('loadProjectFile');
   const toggleHintsBtn = $('toggleHintsBtn');
   const helpModal = $('helpModal');
   const helpCloseBtn = $('helpCloseBtn');
@@ -2037,6 +2043,8 @@
   let bezier3DHover = null; // {kind:'main'|'branch', i?|sec?|mid?, which:'in'|'out'}
   let bezier3DDrag = null;  // {target, which, depth, startMouse, startHX, startHZ}
   let viewMode = 'normal'; // render | normal | wireframe
+  const PROJECT_STORAGE_KEY = 'mk_track_project_v1';
+  let autoSaveTimer = null;
 
   // ---------- undo / redo ----------
   const undoStack = [];
