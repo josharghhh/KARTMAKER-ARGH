@@ -45,6 +45,7 @@
     #ctrlCard .panel{max-height:74vh;overflow:auto}
     #ctrlCard button{background:linear-gradient(180deg,#1a2340,#121a31)}
     #ctrlCard button:hover{border-color:rgba(122,162,255,0.7)}
+<<<<<<< HEAD:index - Copy.html
     #editWrap .editToolbar{left:12px;right:12px;display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
     #editWrap .editToolbar .toolGroup{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
     #editWrap .editToolbar .primaryTools{flex:1 1 520px}
@@ -54,6 +55,8 @@
     @media(max-width:1040px){
       #editWrap .editToolbar .actionTools{margin-left:0}
     }
+=======
+>>>>>>> bdf8e200b1e5c0d2189b64ede3521971dc7e5df7:index.html
   </style>
 </head>
 <body>
@@ -64,6 +67,7 @@
   <div class="card" id="editCard">
     <div class="canvasWrap" id="editWrap">
       <canvas id="edit"></canvas>
+<<<<<<< HEAD:index - Copy.html
       <div class="tools editToolbar">
         <div class="toolGroup primaryTools">
           <button id="toolDraw" class="active">Draw</button>
@@ -88,6 +92,27 @@
         <b>2D</b>: Click add/select • Draw: click yellow/blue curve to insert point • Shift/Ctrl click = multi-select • Drag move (XZ) • <b>Space+drag</b> pan • Shift+drag pan • Wheel zoom • Alt+wheel height<br/>
         <b>Tools</b>: Join = click point A then B to add a joining path section • Y Split = click point/section, then click point to add fork section • Y Split same-point second click = fork point into 2 • Ctrl/Cmd+click/click trim • Alt+click/click join • Roundabout = click point, drag size, click exit • Fence/Tree place in 3D by clicking terrain<br/>
         <b>Bezier</b>: select yellow or blue point then drag handle squares • <b>Alt-drag handle</b> rotate-only (keep length) • <b>1/2/3</b> set Smooth/Aligned/Corner
+=======
+      <div class="tools">
+        <button id="toolDraw" class="active">Draw</button>
+        <button id="toolMove">Move</button>
+        <button id="toolErase">Erase</button>
+        <button id="toolYSplit">Y Split</button>
+        <button id="toolRound">Roundabout</button>
+        <button id="toolFencePlace">Fence Place</button>
+        <button id="toolTreePlace">Tree Place</button>
+        <span class="chip">Selected: <b id="selLabel">none</b> <span id="selCount">(0)</span></span>
+      </div>
+      <div class="actions">
+        <button id="resetBtn">Reset</button>
+        <button id="clearBtn">Clear</button>
+        <button id="exportBtn" class="primary">Export OBJ</button>
+      </div>
+      <div class="hint">
+        <b>2D</b>: Click add/select • Shift/Ctrl click = multi-select • Drag move (XZ) • <b>Space+drag</b> pan • Shift+drag pan • Wheel zoom • Alt+wheel height<br/>
+        <b>Tools</b>: Y Split = click start + rejoin points • Roundabout = click point, drag size, click exit • Fence/Tree place in 3D by clicking terrain<br/>
+        <b>Bezier</b>: select point then drag handle squares • <b>Alt-drag handle</b> rotate-only (keep length) • <b>1/2/3</b> set Smooth/Aligned/Corner
+>>>>>>> bdf8e200b1e5c0d2189b64ede3521971dc7e5df7:index.html
       </div>
     </div>
   </div>
@@ -831,7 +856,11 @@
     }
     minX -= margin; maxX += margin; minZ -= margin; maxZ += margin;
 
+<<<<<<< HEAD:index - Copy.html
     const maxGrid = samples.length > 1100 ? 108 : 148;
+=======
+    const maxGrid = samples.length > 900 ? 84 : 104;
+>>>>>>> bdf8e200b1e5c0d2189b64ede3521971dc7e5df7:index.html
     const nx = clamp(Math.floor((maxX - minX) / cell) + 1, 24, maxGrid);
     const nz = clamp(Math.floor((maxZ - minZ) / cell) + 1, 24, maxGrid);
     const sx = (maxX - minX) / (nx - 1);
@@ -1071,7 +1100,11 @@
         const nearRoadLane = laneLowY - (roadClearance * (1 - insideT) * (1 - insideT));
         const nearRoadY = nearRoadLane * (1 - followRoad) + Math.min(nearRoadDeck, nearRoadLane) * followRoad;
 
+<<<<<<< HEAD:index - Copy.html
         const tfar = clamp((dForShape - edgeLocal) / (margin * 0.62), 0, 1);
+=======
+        const tfar = clamp((d1 - edgeLocal) / (margin * 0.62), 0, 1);
+>>>>>>> bdf8e200b1e5c0d2189b64ede3521971dc7e5df7:index.html
         const ridge = cliffHeight * Math.pow(tfar, 1.16);
         const macroNoise = noise2(x * 0.16 - 13.7, z * 0.14 + 8.9);
         const mountainNoise = Math.abs(noise2(x * 0.055 + 17.1, z * 0.051 - 11.8));
@@ -1739,12 +1772,17 @@
     { pos: v3(-2, 0, 4), bank: 0, node: 'smooth', hin: { x: -1.2, z: 0 }, hout: { x: 1.2, z: 0 } },
   ];
   let selected = -1;
+<<<<<<< HEAD:index - Copy.html
   let selectedBranch = null; // { sec:number, mid:number }
   let selectedBranchSet = new Set(); // key: "sec:mid"
   let selectedSet = new Set();
   let dragIndex = null;
   let dragBranch = null; // { sec:number, mid:number }
   let dragBranchGroupOffsets = null; // [{sec,mid,dx,dz}]
+=======
+  let selectedSet = new Set();
+  let dragIndex = null;
+>>>>>>> bdf8e200b1e5c0d2189b64ede3521971dc7e5df7:index.html
   let dragGroupOffsets = null;
   let dragHandle = null; // {i, which:'in'|'out', len:number}
   let pan2 = { x: 0, y: 0 };
@@ -1802,6 +1840,7 @@
       fencePlaceStart: fencePlaceStart ? v3(fencePlaceStart.x, fencePlaceStart.y, fencePlaceStart.z) : null,
       selected,
       selectedIndices: Array.from(selectedSet),
+<<<<<<< HEAD:index - Copy.html
       selectedBranchIndices: Array.from(selectedBranchSet),
       splitEnds: Array.from(splitEnds),
       branchSections: branchSections.map((s) => ({
@@ -1821,6 +1860,8 @@
           hout: { x: Number(m.hout?.x || 0), z: Number(m.hout?.z || 0) },
         })) : [],
       })),
+=======
+>>>>>>> bdf8e200b1e5c0d2189b64ede3521971dc7e5df7:index.html
       pan2: { x: pan2.x, y: pan2.y },
       cam: { camEye: v3(camEye.x, camEye.y, camEye.z), camYaw, camPitch, camMoveSpeed },
     };
@@ -1833,6 +1874,7 @@
     selected = typeof s.selected === 'number' ? s.selected : -1;
     selectedSet = new Set((s.selectedIndices || []).filter((i) => Number.isInteger(i) && i >= 0 && i < points.length));
     if (selected >= 0) selectedSet.add(selected);
+<<<<<<< HEAD:index - Copy.html
     selectedBranchSet = new Set((s.selectedBranchIndices || []).filter((k) => typeof k === 'string'));
     selectedBranch = null;
     splitEnds = Array.from(new Set((s.splitEnds || []).filter((i) => Number.isInteger(i) && i >= 0 && i < points.length)));
@@ -1853,6 +1895,8 @@
         hout: { x: Number(m.hout?.x || 0), z: Number(m.hout?.z || 0) },
       })) : [],
     })) : [];
+=======
+>>>>>>> bdf8e200b1e5c0d2189b64ede3521971dc7e5df7:index.html
     pan2 = { x: Number(s.pan2?.x || 0), y: Number(s.pan2?.y || 0) };
     if (s.cam) {
       // Back-compat: camTarget/camDist snapshots from earlier builds.
@@ -1870,8 +1914,11 @@
       camMoveSpeed = Number(s.cam.camMoveSpeed ?? camMoveSpeed);
     }
     dragIndex = null;
+<<<<<<< HEAD:index - Copy.html
     dragBranch = null;
     dragBranchGroupOffsets = null;
+=======
+>>>>>>> bdf8e200b1e5c0d2189b64ede3521971dc7e5df7:index.html
     dragGroupOffsets = null;
     dragHandle = null;
     joinTool = { phase: 0, startIdx: -1 };
@@ -1944,6 +1991,7 @@
 
     // Delete selected point(s)
     if ((e.key === 'Delete' || e.key === 'Backspace') && !isTypingTarget(document.activeElement)) {
+<<<<<<< HEAD:index - Copy.html
       sanitizeBranchSelection();
       if (selectedBranchSet.size || selectedBranch) {
         e.preventDefault();
@@ -1973,6 +2021,13 @@
           points.splice(idx, 1);
           remapSplitEndsForSplice(idx, 1, 0);
         }
+=======
+      if (selectedSet.size > 0 || selected >= 0) {
+        e.preventDefault();
+        pushUndo();
+        const del = selectedSet.size ? new Set(selectedSet) : new Set(selected >= 0 ? [selected] : []);
+        points = points.filter((_, i) => !del.has(i));
+>>>>>>> bdf8e200b1e5c0d2189b64ede3521971dc7e5df7:index.html
         selected = -1;
         selectedSet.clear();
         syncSelectedUI();
@@ -2002,6 +2057,7 @@
     return best;
   }
 
+<<<<<<< HEAD:index - Copy.html
   function closestPointOnScreenSegment(sx, sy, ax, ay, bx, by) {
     const vx = bx - ax;
     const vy = by - ay;
@@ -2063,11 +2119,16 @@
   function selectOnly(i) {
     selectedBranch = null;
     selectedBranchSet.clear();
+=======
+
+  function selectOnly(i) {
+>>>>>>> bdf8e200b1e5c0d2189b64ede3521971dc7e5df7:index.html
     selected = i;
     selectedSet.clear();
     if (i >= 0) selectedSet.add(i);
   }
 
+<<<<<<< HEAD:index - Copy.html
   function branchSelKey(sec, mid) { return `${sec}:${mid}`; }
   function parseBranchSelKey(k) {
     const m = /^(-?\d+):(-?\d+)$/.exec(String(k || ''));
@@ -2134,6 +2195,10 @@
     if (i < 0) return;
     selectedBranch = null;
     selectedBranchSet.clear();
+=======
+  function toggleSelection(i) {
+    if (i < 0) return;
+>>>>>>> bdf8e200b1e5c0d2189b64ede3521971dc7e5df7:index.html
     if (selectedSet.has(i)) selectedSet.delete(i);
     else selectedSet.add(i);
     selected = selectedSet.size ? Array.from(selectedSet).sort((a, b) => a - b)[0] : -1;
@@ -2146,6 +2211,7 @@
     return out;
   }
 
+<<<<<<< HEAD:index - Copy.html
   function selYRange() {
     const lo = Number($('selY').min);
     const hi = Number($('selY').max);
@@ -2175,6 +2241,8 @@
     }
   }
 
+=======
+>>>>>>> bdf8e200b1e5c0d2189b64ede3521971dc7e5df7:index.html
   function handleWorld(i, which) {
     const p = points[i];
     ensurePointShape(p);
@@ -2432,6 +2500,7 @@
       return mkCtrlPoint(px, py, pz, 0);
     };
 
+<<<<<<< HEAD:index - Copy.html
     // Fork profile tuned to read as a clear Y split in top view.
     const modulePts = [
       p(0.12, 0.06),
@@ -2468,6 +2537,12 @@
     const ok = addBranchSection(iA, iB, 'join');
     if (ok) selectOnly(iB);
     return ok;
+=======
+    // Single-loop approximation of a split/rejoin section; fully editable after insertion.
+    const modulePts = [p(0.18, 0.75), p(0.40, 1.08), p(0.64, 0.45), p(0.66, -0.45), p(0.42, -1.08), p(0.20, -0.75)];
+    points.splice(a + 1, Math.max(0, b - a - 1), ...modulePts);
+    selectOnly(a + Math.ceil(modulePts.length / 2));
+>>>>>>> bdf8e200b1e5c0d2189b64ede3521971dc7e5df7:index.html
   }
 
   function insertRoundaboutAt(startIdx, center, radius, exitAngle, dir) {
@@ -2489,8 +2564,11 @@
       pts.push(mkCtrlPoint(center.x + Math.cos(a) * radius, S.y, center.z + Math.sin(a) * radius, 0));
     }
     points.splice(startIdx + 1, 0, ...pts);
+<<<<<<< HEAD:index - Copy.html
     remapSplitEndsForSplice(startIdx + 1, 0, pts.length);
     splitEnds = [];
+=======
+>>>>>>> bdf8e200b1e5c0d2189b64ede3521971dc7e5df7:index.html
     selectOnly(startIdx + pts.length);
   }
 
@@ -2645,6 +2723,7 @@
   }
 
   function syncSelectedUI() {
+<<<<<<< HEAD:index - Copy.html
     sanitizeBranchSelection();
     const selCount = selectedSet.size + selectedBranchSet.size;
     if (selectedBranch) $('selLabel').textContent = `b${selectedBranch.sec}.${selectedBranch.mid}`;
@@ -2675,6 +2754,12 @@
       $('selBank').min = '-45';
       $('selBank').max = '45';
       $('selBank').step = '0.5';
+=======
+    const selCount = selectedSet.size;
+    $('selLabel').textContent = selected >= 0 ? String(selected) : 'none';
+    $('selCount').textContent = `(${selCount})`;
+    if (selected < 0 || !points[selected]) {
+>>>>>>> bdf8e200b1e5c0d2189b64ede3521971dc7e5df7:index.html
       $('selNode').value = 'smooth';
       $('selY').value = '0'; $('selBank').value = '0';
       $('selYVal').textContent = '0.0'; $('selBankVal').textContent = '0.0';
@@ -2782,12 +2867,18 @@
       $('terrainRough').value = '3.3';
       $('terrainCliff').value = '10.8';
       $('terrainClearance').value = '0.44';
+<<<<<<< HEAD:index - Copy.html
       $('terrainFollow').value = '0.82';
+=======
+>>>>>>> bdf8e200b1e5c0d2189b64ede3521971dc7e5df7:index.html
     } else if (kind === 'bridge') {
       $('terrainRough').value = '1.6';
       $('terrainCliff').value = '6.6';
       $('terrainClearance').value = '0.58';
+<<<<<<< HEAD:index - Copy.html
       $('terrainFollow').value = '0.90';
+=======
+>>>>>>> bdf8e200b1e5c0d2189b64ede3521971dc7e5df7:index.html
     }
     updateLabels();
   }
@@ -2865,12 +2956,17 @@
     smoothAllPointHandles();
     pan2 = { x: 0, y: 0 };
     selected = -1;
+<<<<<<< HEAD:index - Copy.html
     selectedBranch = null;
     selectedBranchSet.clear();
     selectedSet.clear();
     dragIndex = null;
     dragBranch = null;
     dragBranchGroupOffsets = null;
+=======
+    selectedSet.clear();
+    dragIndex = null;
+>>>>>>> bdf8e200b1e5c0d2189b64ede3521971dc7e5df7:index.html
     dragGroupOffsets = null;
     dragHandle = null;
     joinTool = { phase: 0, startIdx: -1 };
@@ -2895,12 +2991,17 @@
     placedFences = [];
     fencePlaceStart = null;
     selected = -1;
+<<<<<<< HEAD:index - Copy.html
     selectedBranch = null;
     selectedBranchSet.clear();
     selectedSet.clear();
     dragIndex = null;
     dragBranch = null;
     dragBranchGroupOffsets = null;
+=======
+    selectedSet.clear();
+    dragIndex = null;
+>>>>>>> bdf8e200b1e5c0d2189b64ede3521971dc7e5df7:index.html
     dragGroupOffsets = null;
     dragHandle = null;
     joinTool = { phase: 0, startIdx: -1 };
@@ -3088,6 +3189,7 @@
     return ctrl;
   }
 
+<<<<<<< HEAD:index - Copy.html
   function enforceCornerStepLimit(ctrl, maxTurnDeg = 33.33, maxPoints = 220) {
     const maxTurn = clamp(maxTurnDeg, 4, 170) * Math.PI / 180;
     if (!Array.isArray(ctrl) || ctrl.length < 3) return ctrl;
@@ -3178,6 +3280,8 @@
     return ctrl;
   }
 
+=======
+>>>>>>> bdf8e200b1e5c0d2189b64ede3521971dc7e5df7:index.html
   function generateOverlapPoints() {
     const out = [];
     const stylePool = ['figure8', 'clover', 'serpentine', 'mountainSpiral', 'splitS', 'f1long'];
@@ -3408,6 +3512,7 @@
       smoothGeneratedLayout(out, 1 + Math.round(flow), 0.16 + 0.12 * flow, 0.08 + 0.04 * flow);
     }
     const roadW = Math.max(1, num('roadWidth'));
+<<<<<<< HEAD:index - Copy.html
     const overlapTarget = style === 'figure8'
       ? (roadW * (1.65 + 0.55 * (1 - flow)))
       : (style === 'serpentine'
@@ -3425,6 +3530,14 @@
     if (style === 'f1long') {
       enforceLayoutVariety(out, 0.9 + 0.8 * (1 - flow));
     }
+=======
+    const overlapTarget = style === 'figure8' ? (roadW * (1.65 + 0.55 * (1 - flow))) : (roadW * (2.1 + 0.7 * (1 - flow)));
+    relaxSelfCollisions(out, {
+      targetDist: overlapTarget,
+      minNeighborGap: style === 'f1long' ? 4 : 3,
+      passes: style === 'f1long' ? 5 : 4,
+    });
+>>>>>>> bdf8e200b1e5c0d2189b64ede3521971dc7e5df7:index.html
     smoothGeneratedLayout(out, 1 + Math.round(flow), 0.08, 0.03);
     applyTrackRules(out);
     const baseBankIntensity = style === 'f1long' ? (0.42 + 0.34 * r) : (0.65 + 0.55 * r);
@@ -3454,12 +3567,17 @@
     $('closed').checked = true;
     if (num('subdiv') < 8) $('subdiv').value = '8';
     selected = -1;
+<<<<<<< HEAD:index - Copy.html
     selectedBranch = null;
     selectedBranchSet.clear();
     selectedSet.clear();
     dragIndex = null;
     dragBranch = null;
     dragBranchGroupOffsets = null;
+=======
+    selectedSet.clear();
+    dragIndex = null;
+>>>>>>> bdf8e200b1e5c0d2189b64ede3521971dc7e5df7:index.html
     dragGroupOffsets = null;
     dragHandle = null;
     gizmo.active = false;
@@ -4658,7 +4776,10 @@
         }
         ySplitTool.phase = 1;
         ySplitTool.startIdx = hitPoint;
+<<<<<<< HEAD:index - Copy.html
         ySplitTool.action = (e.ctrlKey || e.metaKey) ? 'trim' : (e.altKey ? 'join' : 'split');
+=======
+>>>>>>> bdf8e200b1e5c0d2189b64ede3521971dc7e5df7:index.html
         selectOnly(hitPoint);
         syncSelectedUI();
         return;
@@ -4758,8 +4879,12 @@
     if (mode === 'erase') {
       if (hitPoint >= 0) {
         pushUndo();
+<<<<<<< HEAD:index - Copy.html
         points.splice(hitPoint, 1);
         remapSplitEndsForSplice(hitPoint, 1, 0);
+=======
+        points = points.filter((_, i) => i !== hitPoint);
+>>>>>>> bdf8e200b1e5c0d2189b64ede3521971dc7e5df7:index.html
         selectOnly(-1);
         syncSelectedUI();
         cached = null;
@@ -4802,6 +4927,7 @@
 
     if (mode === 'draw') {
       pushUndo();
+<<<<<<< HEAD:index - Copy.html
       const curveHit = nearestCurveHitScreen(sx, sy, org, s, 10);
       if (curveHit) {
         const tan = norm(v3(curveHit.tan.x, 0, curveHit.tan.z));
@@ -4844,6 +4970,19 @@
           selectOnly(idx);
         }
       }
+=======
+      const g = Math.max(0.01, num('grid'));
+      const wp = worldFromScreenXZWithY(sx, sy, org, s, 0);
+      const snap = snapXZ(wp.x, wp.z, g);
+      points.push({
+        pos: v3(snap.x, 0, snap.z),
+        bank: 0,
+        node: 'smooth',
+        hin: { x: -1.2, z: 0 },
+        hout: { x: 1.2, z: 0 },
+      });
+      selectOnly(points.length - 1);
+>>>>>>> bdf8e200b1e5c0d2189b64ede3521971dc7e5df7:index.html
       syncSelectedUI();
       cached = null;
     }
@@ -4953,8 +5092,11 @@
       if (roundTool.phase === 1 && roundTool.radius > 0.5) roundTool.phase = 2;
     }
     dragIndex = null;
+<<<<<<< HEAD:index - Copy.html
     dragBranch = null;
     dragBranchGroupOffsets = null;
+=======
+>>>>>>> bdf8e200b1e5c0d2189b64ede3521971dc7e5df7:index.html
     dragGroupOffsets = null;
     dragHandle = null;
     isPanning2 = false;
@@ -4963,12 +5105,18 @@
 
   edit.addEventListener('wheel', (e) => {
     e.preventDefault();
+<<<<<<< HEAD:index - Copy.html
     if (e.altKey && (selectedBranchSet.size || selectedBranch)) {
       applyHeightDeltaToBranchSelection(-e.deltaY * 0.01);
+=======
+    if (e.altKey && selected >= 0 && points[selected]) {
+      points[selected].pos.y = clamp(points[selected].pos.y - e.deltaY * 0.01, -20, 40);
+>>>>>>> bdf8e200b1e5c0d2189b64ede3521971dc7e5df7:index.html
       syncSelectedUI();
       cached = null;
       return;
     }
+<<<<<<< HEAD:index - Copy.html
     if (e.altKey && (selectedSet.size || (selected >= 0 && points[selected]))) {
       applyHeightDeltaToMainSelection(-e.deltaY * 0.01);
       syncSelectedUI();
@@ -4978,6 +5126,10 @@
     const zoomFactor = Math.exp(-e.deltaY * 0.0015);
     const z = clamp(num('isoScale') * zoomFactor, 0.02, 240);
     $('isoScale').value = z.toFixed(2);
+=======
+    const z = clamp(num('isoScale') - e.deltaY * 0.03, 10, 80);
+    $('isoScale').value = String(Math.round(z));
+>>>>>>> bdf8e200b1e5c0d2189b64ede3521971dc7e5df7:index.html
     updateLabels();
   }, { passive: false });
 
