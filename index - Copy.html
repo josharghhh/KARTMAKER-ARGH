@@ -27,9 +27,9 @@
     button.primary{background:var(--btn);border-color:rgba(122,162,255,0.55)}
     button.active{outline:2px solid rgba(122,162,255,0.7)}
     .chip{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);padding:8px 10px;border-radius:999px;font-size:12px;color:rgba(255,255,255,0.9)}
-    .panel{padding:14px}
+    .panel{padding:16px;background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))}
     h2{margin:0 0 8px 0;font-size:18px}
-    .small{font-size:12px;color:var(--muted)}
+    .small{font-size:12px;color:var(--muted);line-height:1.45}
     label{font-size:12px;color:var(--muted);display:block;margin:10px 0 6px}
     input[type="text"], input[type="number"], select{width:100%;padding:10px 10px;border-radius:14px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.25);color:var(--ink)}
     input[type="range"]{width:100%}
@@ -41,6 +41,19 @@
     #err{position:fixed;left:12px;right:12px;bottom:12px;display:none;padding:10px 12px;border-radius:14px;background:rgba(255,80,80,0.14);border:1px solid rgba(255,80,80,0.35);color:rgba(255,255,255,0.92);font-size:12px;white-space:pre-wrap;z-index:9999}
     .row{display:flex;gap:10px;align-items:center}
     .row > *{flex:1}
+    #ctrlCard .panel > h2{letter-spacing:.02em}
+    #ctrlCard .panel{max-height:74vh;overflow:auto}
+    #ctrlCard button{background:linear-gradient(180deg,#1a2340,#121a31)}
+    #ctrlCard button:hover{border-color:rgba(122,162,255,0.7)}
+    #editWrap .editToolbar{left:12px;right:12px;display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+    #editWrap .editToolbar .toolGroup{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    #editWrap .editToolbar .primaryTools{flex:1 1 520px}
+    #editWrap .editToolbar .statusTools{flex:0 1 auto}
+    #editWrap .editToolbar .actionTools{margin-left:auto}
+    #editWrap .editToolbar button{padding:9px 12px;border-radius:13px;white-space:nowrap}
+    @media(max-width:1040px){
+      #editWrap .editToolbar .actionTools{margin-left:0}
+    }
   </style>
 </head>
 <body>
@@ -51,25 +64,30 @@
   <div class="card" id="editCard">
     <div class="canvasWrap" id="editWrap">
       <canvas id="edit"></canvas>
-      <div class="tools">
-        <button id="toolDraw" class="active">Draw</button>
-        <button id="toolMove">Move</button>
-        <button id="toolErase">Erase</button>
-        <button id="toolYSplit">Y Split</button>
-        <button id="toolRound">Roundabout</button>
-        <button id="toolFencePlace">Fence Place</button>
-        <button id="toolTreePlace">Tree Place</button>
-        <span class="chip">Selected: <b id="selLabel">none</b></span>
-      </div>
-      <div class="actions">
-        <button id="resetBtn">Reset</button>
-        <button id="clearBtn">Clear</button>
-        <button id="exportBtn" class="primary">Export OBJ</button>
+      <div class="tools editToolbar">
+        <div class="toolGroup primaryTools">
+          <button id="toolDraw" class="active">Draw</button>
+          <button id="toolMove">Move</button>
+          <button id="toolErase">Erase</button>
+          <button id="toolJoin">Join</button>
+          <button id="toolYSplit">Y Split</button>
+          <button id="toolRound">Roundabout</button>
+          <button id="toolFencePlace">Fence Place</button>
+          <button id="toolTreePlace">Tree Place</button>
+        </div>
+        <div class="toolGroup statusTools">
+          <span class="chip">Selected: <b id="selLabel">none</b> <span id="selCount">(0)</span></span>
+        </div>
+        <div class="toolGroup actionTools">
+          <button id="resetBtn">Reset</button>
+          <button id="clearBtn">Clear</button>
+          <button id="exportBtn" class="primary">Export OBJ</button>
+        </div>
       </div>
       <div class="hint">
-        <b>2D</b>: Click add/select • Drag move (XZ) • <b>Space+drag</b> pan • Shift+drag pan • Ctrl+wheel zoom • Alt+wheel height<br/>
-        <b>Tools</b>: Y Split = click start + rejoin points • Roundabout = click point, drag size, click exit • Fence/Tree place in 3D by clicking terrain<br/>
-        <b>Bezier</b>: select point then drag handle squares • <b>Alt-drag handle</b> rotate-only (keep length) • <b>1/2/3</b> set Smooth/Aligned/Corner
+        <b>2D</b>: Click add/select • Draw: click yellow/blue curve to insert point • Shift/Ctrl click = multi-select • Drag move (XZ) • <b>Space+drag</b> pan • Shift+drag pan • Wheel zoom • Alt+wheel height<br/>
+        <b>Tools</b>: Join = click point A then B to add a joining path section • Y Split = click point/section, then click point to add fork section • Y Split same-point second click = fork point into 2 • Ctrl/Cmd+click/click trim • Alt+click/click join • Roundabout = click point, drag size, click exit • Fence/Tree place in 3D by clicking terrain<br/>
+        <b>Bezier</b>: select yellow or blue point then drag handle squares • <b>Alt-drag handle</b> rotate-only (keep length) • <b>1/2/3</b> set Smooth/Aligned/Corner
       </div>
     </div>
   </div>
@@ -80,7 +98,7 @@
   <div class="card" id="viewCard">
     <div class="canvasWrap" id="viewWrap">
       <canvas id="view"></canvas>
-      <div class="tools"><span class="chip">3D: WASD + Q/Z move • RMB look • LMB look • MMB pan • Alt+RMB orbit selected • RMB+wheel speed • MMB click reset speed • F focus</span></div>
+      <div class="tools"><span class="chip">3D: WASD + Q/Z move • RMB look • LMB look • MMB pan • Alt+RMB orbit selected • RMB+wheel speed • MMB click reset speed • F focus • Drag yellow gizmo center = free move</span></div>
       <div class="actions"><button id="viewModeBtn">Mode: Render</button></div>
       <div class="hint">Offline 3D preview (no CDN). Export OBJ for Blender/Rhino. Gizmo snaps X/Z to grid. In Fence/Tree place mode, click terrain to place (fence uses 2 clicks).</div>
     </div>
@@ -109,27 +127,32 @@
         </div>
         <div>
           <label>Iso zoom</label>
-          <input id="isoScale" type="range" min="10" max="80" step="1" value="30"/>
-          <div class="small"><span id="isoScaleVal">30</span></div>
+          <input id="isoScale" type="range" min="0.02" max="240" step="0.02" value="5.98"/>
+          <div class="small"><span id="isoScaleVal">5.98</span></div>
         </div>
       </div>
+      <div class="toggle"><label style="margin:0">Road iso snap</label><input id="roadIsoSnap" type="checkbox" checked/></div>
 
       <div class="toggle"><label style="margin:0">Show grid</label><input id="showGrid" type="checkbox" checked/></div>
-      <div class="toggle"><label style="margin:0">Closed loop</label><input id="closed" type="checkbox"/></div>
+      <div class="toggle"><label style="margin:0">Closed loop</label><input id="closed" type="checkbox" checked/></div>
 
       <label>Road width</label>
-      <input id="roadWidth" type="range" min="1" max="14" step="0.25" value="4.5"/>
-      <div class="small"><span id="roadWidthVal">4.50</span></div>
+      <input id="roadWidth" type="range" min="1" max="14" step="0.25" value="4.0"/>
+      <div class="small"><span id="roadWidthVal">4.00</span></div>
 
       <label>Thickness (Y)</label>
-      <input id="roadThickness" type="range" min="0.05" max="3" step="0.05" value="0.7"/>
-      <div class="small"><span id="roadThicknessVal">0.70</span></div>
+      <input id="roadThickness" type="range" min="0.05" max="3" step="0.05" value="0.05"/>
+      <div class="small"><span id="roadThicknessVal">0.05</span></div>
 
       <div class="toggle"><label style="margin:0">Include side walls</label><input id="includeSides" type="checkbox" checked/></div>
 
       <label>Spline smoothness</label>
-      <input id="subdiv" type="range" min="2" max="30" step="1" value="10"/>
-      <div class="small"><span id="subdivVal">10</span></div>
+      <input id="subdiv" type="range" min="2" max="30" step="1" value="25"/>
+      <div class="small"><span id="subdivVal">25</span></div>
+
+      <label>Path detail (performance)</label>
+      <input id="pathDetail" type="range" min="0.30" max="1.00" step="0.01" value="0.51"/>
+      <div class="small"><span id="pathDetailVal">0.51x</span></div>
 
       <div class="hr"></div>
 
@@ -141,46 +164,55 @@
         <option value="figure8">Figure-8 (Mario Kart style)</option>
         <option value="clover">Cloverleaf</option>
         <option value="serpentine">Serpentine</option>
+        <option value="mountainSpiral">Mountain spiral</option>
         <option value="splitS">Split-S</option>
         <option value="f1long">F1 long circuit</option>
-        <option value="random">Random style mix</option>
+        <option value="random" selected>Random style mix</option>
       </select>
 
-      <div class="toggle"><label style="margin:0">Y-split modifier</label><input id="genModY" type="checkbox"/></div>
+      <div class="toggle"><label style="margin:0">Y-split modifier</label><input id="genModY" type="checkbox" checked/></div>
       <div class="toggle"><label style="margin:0">Roundabout modifier</label><input id="genModRound" type="checkbox"/></div>
-      <div class="toggle"><label style="margin:0">Crossroads modifier</label><input id="genModCross" type="checkbox"/></div>
+      <div class="toggle"><label style="margin:0">Crossroads modifier</label><input id="genModCross" type="checkbox" checked/></div>
 
       <label>Layout variation</label>
-      <input id="genRandomness" type="range" min="0" max="1" step="0.01" value="0.42"/>
-      <div class="small"><span id="genRandomnessVal">0.42</span></div>
+      <input id="genRandomness" type="range" min="0" max="1" step="0.01" value="0.87"/>
+      <div class="small"><span id="genRandomnessVal">0.87</span></div>
 
       <label>Track size</label>
-      <input id="genScale" type="range" min="0.6" max="3.8" step="0.01" value="1.00"/>
-      <div class="small"><span id="genScaleVal">1.00x</span></div>
+      <input id="genScale" type="range" min="0.6" max="3.8" step="0.01" value="3.73"/>
+      <div class="small"><span id="genScaleVal">3.73x</span></div>
 
       <label>Lap length</label>
-      <input id="genLength" type="range" min="0.7" max="3.5" step="0.01" value="1.20"/>
-      <div class="small"><span id="genLengthVal">1.20x</span></div>
+      <input id="genLength" type="range" min="0.7" max="3.5" step="0.01" value="2.40"/>
+      <div class="small"><span id="genLengthVal">2.40x</span></div>
 
       <label>Curve count</label>
-      <input id="genCurves" type="range" min="2" max="16" step="1" value="4"/>
-      <div class="small"><span id="genCurvesVal">4</span></div>
+      <input id="genCurves" type="range" min="2" max="16" step="1" value="7"/>
+      <div class="small"><span id="genCurvesVal">7</span></div>
+
+      <label>Generator point cap</label>
+      <input id="genPointCap" type="range" min="16" max="120" step="1" value="27"/>
+      <div class="small"><span id="genPointCapVal">27</span></div>
+
+      <label>Design combo count</label>
+      <input id="genComboCount" type="range" min="1" max="3" step="1" value="2"/>
+      <div class="small"><span id="genComboCountVal">2</span></div>
 
       <label>Straight bias</label>
-      <input id="genStraights" type="range" min="0" max="1" step="0.01" value="0.55"/>
-      <div class="small"><span id="genStraightsVal">0.55</span></div>
+      <input id="genStraights" type="range" min="0" max="1" step="0.01" value="0.78"/>
+      <div class="small"><span id="genStraightsVal">0.78</span></div>
 
       <label>Flow smoothing</label>
-      <input id="genFlow" type="range" min="0" max="1" step="0.01" value="0.68"/>
-      <div class="small"><span id="genFlowVal">0.68</span></div>
+      <input id="genFlow" type="range" min="0" max="1" step="0.01" value="0.86"/>
+      <div class="small"><span id="genFlowVal">0.86</span></div>
 
       <label>Roundabout exits</label>
       <input id="genRoundExits" type="range" min="2" max="4" step="1" value="3"/>
       <div class="small"><span id="genRoundExitsVal">3</span></div>
 
       <label>Crossroads frequency</label>
-      <input id="genCrossFreq" type="range" min="1" max="4" step="1" value="2"/>
-      <div class="small"><span id="genCrossFreqVal">2</span></div>
+      <input id="genCrossFreq" type="range" min="1" max="4" step="1" value="3"/>
+      <div class="small"><span id="genCrossFreqVal">3</span></div>
 
       <button id="genBtn" style="margin-top:8px">Generate Track</button>
 
@@ -190,14 +222,17 @@
       <div class="small">Optional rough cliff terrain around the track footprint.</div>
       <div class="toggle"><label style="margin:0">Generate terrain</label><input id="terrainOn" type="checkbox" checked/></div>
       <label>Terrain roughness</label>
-      <input id="terrainRough" type="range" min="0" max="4" step="0.1" value="1.2"/>
-      <div class="small"><span id="terrainRoughVal">1.2</span></div>
+      <input id="terrainRough" type="range" min="0" max="4" step="0.1" value="4.0"/>
+      <div class="small"><span id="terrainRoughVal">4.0</span></div>
       <label>Cliff height</label>
-      <input id="terrainCliff" type="range" min="1" max="12" step="0.2" value="4.5"/>
-      <div class="small"><span id="terrainCliffVal">4.5</span></div>
+      <input id="terrainCliff" type="range" min="1" max="12" step="0.2" value="10.0"/>
+      <div class="small"><span id="terrainCliffVal">10.0</span></div>
       <label>Road → terrain clearance</label>
-      <input id="terrainClearance" type="range" min="0.05" max="1.20" step="0.01" value="0.28"/>
-      <div class="small"><span id="terrainClearanceVal">0.28</span></div>
+      <input id="terrainClearance" type="range" min="0.05" max="1.20" step="0.01" value="1.20"/>
+      <div class="small"><span id="terrainClearanceVal">1.20</span></div>
+      <label>Terrain follow road</label>
+      <input id="terrainFollow" type="range" min="0" max="1" step="0.01" value="0.88"/>
+      <div class="small"><span id="terrainFollowVal">0.88</span></div>
       <label>Terrain presets</label>
       <div class="row">
         <button id="terrainPresetClean" type="button">Kart clean</button>
@@ -212,8 +247,8 @@
       <div class="toggle"><label style="margin:0">Enable theme dressing</label><input id="themeOn" type="checkbox" checked/></div>
 
       <label>Grass shoulder width</label>
-      <input id="themeGrass" type="range" min="0.5" max="6.5" step="0.1" value="2.6"/>
-      <div class="small"><span id="themeGrassVal">2.6</span></div>
+      <input id="themeGrass" type="range" min="0.5" max="6.5" step="0.1" value="0.6"/>
+      <div class="small"><span id="themeGrassVal">0.6</span></div>
 
       <label>Curb height</label>
       <input id="themeCurb" type="range" min="0.02" max="0.30" step="0.01" value="0.10"/>
@@ -247,7 +282,7 @@
           <div class="small"><span id="selYVal">0.0</span></div>
         </div>
         <div>
-          <label>Bank (deg)</label>
+          <label id="selBankLabel">Bank (deg)</label>
           <input id="selBank" type="range" min="-45" max="45" step="0.5" value="0"/>
           <div class="small"><span id="selBankVal">0.0</span></div>
         </div>
@@ -257,18 +292,18 @@
 
       <h2 style="font-size:16px;margin:0 0 6px">Auto bank (optional)</h2>
       <div class="small">Derives banking from curvature (turning). Blends with manual bank per point.</div>
-      <div class="toggle"><label style="margin:0">Enable auto bank</label><input id="autoBank" type="checkbox"/></div>
+      <div class="toggle"><label style="margin:0">Enable auto bank</label><input id="autoBank" type="checkbox" checked/></div>
 
       <label>Auto bank strength</label>
-      <input id="autoBankStrength" type="range" min="0" max="1" step="0.01" value="0.65"/>
-      <div class="small"><span id="autoBankStrengthVal">0.65</span></div>
+      <input id="autoBankStrength" type="range" min="0" max="1" step="0.01" value="0.72"/>
+      <div class="small"><span id="autoBankStrengthVal">0.72</span></div>
 
       <label>Max auto bank (deg)</label>
-      <input id="autoBankMax" type="range" min="0" max="60" step="1" value="22"/>
-      <div class="small"><span id="autoBankMaxVal">22</span></div>
+      <input id="autoBankMax" type="range" min="0" max="60" step="1" value="16"/>
+      <div class="small"><span id="autoBankMaxVal">16</span></div>
 
       <label>Curvature → bank scale</label>
-      <input id="autoBankScale" type="range" min="0" max="4" step="0.05" value="1.4"/>
+      <input id="autoBankScale" type="range" min="0" max="4" step="0.05" value="1.40"/>
       <div class="small"><span id="autoBankScaleVal">1.40</span></div>
 
       <div class="hr"></div>
@@ -340,6 +375,14 @@
     const uu = u * u, tt = t * t;
     const uuu = uu * u, ttt = tt * t;
     return add(add(add(mul(p0, uuu), mul(c0, 3 * uu * t)), mul(c1, 3 * u * tt)), mul(p1, ttt));
+  }
+
+  function bezierDeriv(p0, c0, c1, p1, t) {
+    const u = 1 - t;
+    const a = mul(sub(c0, p0), 3 * u * u);
+    const b = mul(sub(c1, c0), 6 * u * t);
+    const c = mul(sub(p1, c1), 3 * t * t);
+    return add(add(a, b), c);
   }
 
   function ensurePointShape(p) {
@@ -434,9 +477,249 @@
     return out;
   }
 
+  function effectiveSubdiv() {
+    return clamp(Math.round(num('subdiv') * num('pathDetail')), 2, 30);
+  }
+
+  function branchAnchors(sec) {
+    const a = points[sec.a];
+    const b = points[sec.b];
+    if (!a || !b) return [];
+    const mids = Array.isArray(sec.mids) ? sec.mids.slice().sort((m1, m2) => m1.u - m2.u) : [];
+    const AB = sub(b.pos, a.pos);
+    const flat = v3(AB.x, 0, AB.z);
+    const L = Math.max(0.01, len(flat));
+    const t = norm(flat);
+    const n = norm(v3(-t.z, 0, t.x));
+    const bendSide = (Number(sec.bend) || 1) >= 0 ? 1 : -1;
+    const bendAmt = Math.min(L * 0.30, Math.max(num('roadWidth') * 0.95, L * 0.13));
+    const bend = mul(n, bendAmt * bendSide * (sec.kind === 'fork' ? 1.15 : 0.8));
+    const endScale = 0.30;
+    return [
+      {
+        x: a.pos.x, y: a.pos.y, z: a.pos.z, u: 0, node: 'smooth', bevel: 0.65,
+        hin: { x: -t.x * L * endScale - bend.x * 0.45, z: -t.z * L * endScale - bend.z * 0.45 },
+        hout: { x: t.x * L * endScale + bend.x, z: t.z * L * endScale + bend.z },
+      },
+      ...mids.map((m) => ({
+        x: m.x, y: m.y, z: m.z, u: clamp(Number(m.u || 0), 0.001, 0.999),
+        bevel: clamp(Number(m.bevel ?? 0.55), 0, 1),
+        node: (m.node === 'aligned' || m.node === 'corner') ? m.node : 'smooth',
+        hin: { x: Number(m.hin?.x || 0), z: Number(m.hin?.z || 0) },
+        hout: { x: Number(m.hout?.x || 0), z: Number(m.hout?.z || 0) },
+      })),
+      {
+        x: b.pos.x, y: b.pos.y, z: b.pos.z, u: 1, node: 'smooth', bevel: 0.65,
+        hin: { x: -t.x * L * endScale + bend.x, z: -t.z * L * endScale + bend.z },
+        hout: { x: t.x * L * endScale - bend.x * 0.45, z: t.z * L * endScale - bend.z * 0.45 },
+      },
+    ];
+  }
+
+  function sampleBranchSection(sec, subdiv) {
+    const a = points[sec.a];
+    const b = points[sec.b];
+    if (!a || !b) return [];
+    const anchors = branchAnchors(sec);
+    const lift = Math.max(0, Number(sec.lift) || 0);
+    const steps = Math.max(8, Math.round(subdiv * (sec.kind === 'fork' ? 2.3 : 2.0)));
+    const out = [];
+    const spans = anchors.length - 1;
+    for (let si = 0; si < spans; si++) {
+      const p0 = anchors[si];
+      const p1 = anchors[si + 1];
+      const spanSteps = Math.max(4, Math.round(steps / spans));
+      const s0 = 0.08 + clamp(Number(p0.bevel ?? 0.55), 0, 1) * 1.15;
+      const s1 = 0.08 + clamp(Number(p1.bevel ?? 0.55), 0, 1) * 1.15;
+      const c0 = v3(p0.x + p0.hout.x * s0, p0.y, p0.z + p0.hout.z * s0);
+      const c1 = v3(p1.x + p1.hin.x * s1, p1.y, p1.z + p1.hin.z * s1);
+      for (let k = 0; k <= spanSteps; k++) {
+        if (si > 0 && k === 0) continue;
+        const tLocal = k / spanSteps;
+        const u = (si + tLocal) / spans;
+        const p = bezier(v3(p0.x, p0.y, p0.z), c0, c1, v3(p1.x, p1.y, p1.z), tLocal);
+        p.y += Math.sin(u * Math.PI) * lift;
+        out.push({ pos: p, bank: (1 - u) * (a.bank || 0) + u * (b.bank || 0), u });
+      }
+    }
+    return out;
+  }
+
+  function nearestBranchCurveHitScreen(sx, sy, org, s, maxPix = 12) {
+    sanitizeBranchSections();
+    const subdiv = effectiveSubdiv();
+    let best = null;
+    for (let si = 0; si < branchSections.length; si++) {
+      const sec = branchSections[si];
+      const smp = sampleBranchSection(sec, subdiv);
+      if (smp.length < 2) continue;
+      let prev = smp[0];
+      let prevSp = screenFromWorld2(prev.pos, org, s);
+      for (let i = 1; i < smp.length; i++) {
+        const cur = smp[i];
+        const curSp = screenFromWorld2(cur.pos, org, s);
+        const hit = closestPointOnScreenSegment(sx, sy, prevSp.x, prevSp.y, curSp.x, curSp.y);
+        if (hit.d <= maxPix && (!best || hit.d < best.dist)) {
+          const u = prev.u + (cur.u - prev.u) * hit.t;
+          const pos = add(mul(prev.pos, 1 - hit.t), mul(cur.pos, hit.t));
+          const tan = norm(sub(cur.pos, prev.pos));
+          best = { dist: hit.d, sec: si, u, pos, tan };
+        }
+        prev = cur;
+        prevSp = curSp;
+      }
+    }
+    return best;
+  }
+
+  function nearestBranchMidpointScreen(sx, sy, org, s, maxPix = 12) {
+    sanitizeBranchSections();
+    let best = null;
+    for (let si = 0; si < branchSections.length; si++) {
+      const mids = branchSections[si]?.mids || [];
+      for (let mi = 0; mi < mids.length; mi++) {
+        const m = mids[mi];
+        const sp = screenFromWorld2(v3(m.x, m.y, m.z), org, s);
+        const d = Math.hypot(sp.x - sx, sp.y - sy);
+        if (d <= maxPix && (!best || d < best.dist)) best = { sec: si, mid: mi, dist: d };
+      }
+    }
+    return best;
+  }
+
+  function insertBranchMidpoint(secIdx, u, pos, tanHint = null) {
+    const sec = branchSections[secIdx];
+    if (!sec || !pos) return false;
+    const sp = maybeSnapXZ(pos.x, pos.z);
+    const midPos = v3(sp.x, pos.y, sp.z);
+    if (!Array.isArray(sec.mids)) sec.mids = [];
+    const prev = points[sec.a]?.pos || midPos;
+    const next = points[sec.b]?.pos || midPos;
+    const inDist = Math.max(0.08, len(sub(midPos, prev)));
+    const outDist = Math.max(0.08, len(sub(next, midPos)));
+    let t = tanHint ? norm(v3(tanHint.x, 0, tanHint.z)) : norm(sub(next, prev));
+    if (!Number.isFinite(t.x) || !Number.isFinite(t.z) || Math.hypot(t.x, t.z) < 1e-6) t = v3(1, 0, 0);
+    const hIn = inDist * 0.34;
+    const hOut = outDist * 0.34;
+    sec.mids.push({
+      u: clamp(Number(u || 0.5), 0.001, 0.999),
+      x: midPos.x,
+      y: pos.y,
+      z: midPos.z,
+      bevel: 0.55,
+      node: 'smooth',
+      hin: { x: -t.x * hIn, z: -t.z * hIn },
+      hout: { x: t.x * hOut, z: t.z * hOut },
+    });
+    sanitizeBranchSections();
+    const mids = sec.mids || [];
+    let best = 0;
+    let bestD = 1e9;
+    for (let i = 0; i < mids.length; i++) {
+      const d = Math.abs(mids[i].u - u);
+      if (d < bestD) { bestD = d; best = i; }
+    }
+    selectBranchMidpoint(secIdx, best);
+    return true;
+  }
+
+  function sampleRoadNetwork() {
+    sanitizeBranchSections();
+    const subdiv = effectiveSubdiv();
+    const main = sampleSpline(points, subdiv, chk('closed'), autoBankCfg());
+    const branches = [];
+    for (const sec of branchSections) {
+      const samples = sampleBranchSection(sec, subdiv);
+      if (samples.length > 1) branches.push(samples);
+    }
+    const all = main.slice();
+    for (const s of branches) all.push(...s);
+    return { main, branches, all, subdiv };
+  }
+
+  function cloneMesh(mesh, nameOverride = null) {
+    return {
+      name: nameOverride || mesh.name,
+      verts: mesh.verts.map((p) => v3(p.x, p.y, p.z)),
+      uvs: mesh.uvs.map((uv) => ({ u: uv.u, v: uv.v })),
+      faces: mesh.faces.map((f) => ({ ...f })),
+    };
+  }
+
+  function mergeMeshInto(dst, src) {
+    const vOff = dst.verts.length;
+    const uvOff = dst.uvs.length;
+    for (const p of src.verts) dst.verts.push(v3(p.x, p.y, p.z));
+    for (const uv of src.uvs) dst.uvs.push({ u: uv.u, v: uv.v });
+    for (const f of src.faces) {
+      dst.faces.push({
+        a: f.a + vOff,
+        b: f.b + vOff,
+        c: f.c + vOff,
+        au: f.au + uvOff,
+        bu: f.bu + uvOff,
+        cu: f.cu + uvOff,
+      });
+    }
+  }
+
+  function addJunctionPads(roadTop, width) {
+    sanitizeBranchSections();
+    if (!roadTop || !Array.isArray(roadTop.verts) || !branchSections.length) return;
+    const used = new Set();
+    const junctionIdx = [];
+    for (const sec of branchSections) {
+      if (Number.isInteger(sec.a) && !used.has(sec.a)) { used.add(sec.a); junctionIdx.push(sec.a); }
+      if (Number.isInteger(sec.b) && !used.has(sec.b)) { used.add(sec.b); junctionIdx.push(sec.b); }
+    }
+    if (!junctionIdx.length) return;
+
+    const addRingStrip = (mesh, inner, outer) => {
+      const n = Math.min(inner.length, outer.length);
+      if (n < 3) return;
+      for (let i = 0; i < n; i++) {
+        const j = (i + 1) % n;
+        const a0 = inner[i], a1 = inner[j];
+        const b0 = outer[i], b1 = outer[j];
+        meshAddTri(mesh, a0, b0, b1);
+        meshAddTri(mesh, a0, b1, a1);
+      }
+    };
+
+    const ringSteps = 22;
+    const yLift = 0.014;
+    const r0 = Math.max(0.14, width * 0.16);
+    const r1 = Math.max(r0 + 0.08, width * 0.40);
+    const r2 = Math.max(r1 + 0.08, width * 0.70);
+    for (const idx of junctionIdx) {
+      const p = points[idx]?.pos;
+      if (!p) continue;
+      let t = tangentAtIndex(idx);
+      t = norm(v3(t.x, 0, t.z));
+      if (Math.hypot(t.x, t.z) < 1e-6) t = v3(1, 0, 0);
+      const r = norm(v3(-t.z, 0, t.x));
+      const rings = [[], [], []];
+      const radii = [r0, r1, r2];
+      for (let ri = 0; ri < radii.length; ri++) {
+        const rr = radii[ri];
+        const vv = ri / Math.max(1, radii.length - 1);
+        for (let k = 0; k < ringSteps; k++) {
+          const a = (k / ringSteps) * Math.PI * 2;
+          const offs = add(mul(r, Math.cos(a) * rr), mul(t, Math.sin(a) * rr));
+          const vx = p.x + offs.x;
+          const vz = p.z + offs.z;
+          const vy = p.y + yLift - vv * 0.006;
+          rings[ri].push(meshAddVertex(roadTop, v3(vx, vy, vz), (k / ringSteps), vv));
+        }
+      }
+      addRingStrip(roadTop, rings[0], rings[1]);
+      addRingStrip(roadTop, rings[1], rings[2]);
+    }
+  }
+
   // ---------- mesh generation ----------
   function buildRoadMesh(samples, opts) {
-    const { width, thickness, includeSides, uvScale } = opts;
+    const { width, thickness, includeSides, uvScale, capEnds = false } = opts;
     const half = width / 2;
     const dists = [0];
     for (let i = 1; i < samples.length; i++) dists.push(dists[i - 1] + len(sub(samples[i].pos, samples[i - 1].pos)));
@@ -472,8 +755,20 @@
     }
     for (let i = 0; i < segCount; i++) {
       const aL = i * 2 + 1, aR = i * 2 + 2, bL = (i + 1) * 2 + 1, bR = (i + 1) * 2 + 2;
-      roadTop.faces.push({ a: aL, b: bL, c: bR, au: aL, bu: bL, cu: bR });
-      roadTop.faces.push({ a: aL, b: bR, c: aR, au: aL, bu: bR, cu: aR });
+      // Corner-aware quad split: choose the diagonal that better conforms to local curve geometry.
+      const pAL = roadTop.verts[aL - 1];
+      const pAR = roadTop.verts[aR - 1];
+      const pBL = roadTop.verts[bL - 1];
+      const pBR = roadTop.verts[bR - 1];
+      const dMain = Math.hypot(pAL.x - pBR.x, pAL.y - pBR.y, pAL.z - pBR.z);
+      const dAlt = Math.hypot(pAR.x - pBL.x, pAR.y - pBL.y, pAR.z - pBL.z);
+      if (dMain <= dAlt) {
+        roadTop.faces.push({ a: aL, b: bL, c: bR, au: aL, bu: bL, cu: bR });
+        roadTop.faces.push({ a: aL, b: bR, c: aR, au: aL, bu: bR, cu: aR });
+      } else {
+        roadTop.faces.push({ a: aL, b: bL, c: aR, au: aL, bu: bL, cu: aR });
+        roadTop.faces.push({ a: aR, b: bL, c: bR, au: aR, bu: bL, cu: bR });
+      }
     }
 
     let roadSides = null;
@@ -500,6 +795,18 @@
         roadSides.faces.push({ a: lt0, b: lt1, c: lb1, au: lt0, bu: lt1, cu: lb1 });
         roadSides.faces.push({ a: rt0, b: rb0, c: rb1, au: rt0, bu: rb0, cu: rb1 });
         roadSides.faces.push({ a: rt0, b: rb1, c: rt1, au: rt0, bu: rb1, cu: rt1 });
+        // Bottom strip for closed manifold road volume.
+        roadSides.faces.push({ a: lb0, b: lb1, c: rb1, au: lb0, bu: lb1, cu: rb1 });
+        roadSides.faces.push({ a: lb0, b: rb1, c: rb0, au: lb0, bu: rb1, cu: rb0 });
+      }
+      if (capEnds && samples.length >= 2) {
+        const ltS = 1, lbS = 2, rtS = 3, rbS = 4;
+        const bE = (samples.length - 1) * 4;
+        const ltE = bE + 1, lbE = bE + 2, rtE = bE + 3, rbE = bE + 4;
+        roadSides.faces.push({ a: ltS, b: rbS, c: lbS, au: ltS, bu: rbS, cu: lbS });
+        roadSides.faces.push({ a: ltS, b: rtS, c: rbS, au: ltS, bu: rtS, cu: rbS });
+        roadSides.faces.push({ a: ltE, b: lbE, c: rbE, au: ltE, bu: lbE, cu: rbE });
+        roadSides.faces.push({ a: ltE, b: rbE, c: rtE, au: ltE, bu: rbE, cu: rtE });
       }
     }
 
@@ -524,22 +831,28 @@
     }
     minX -= margin; maxX += margin; minZ -= margin; maxZ += margin;
 
-    const nx = clamp(Math.floor((maxX - minX) / cell) + 1, 24, 120);
-    const nz = clamp(Math.floor((maxZ - minZ) / cell) + 1, 24, 120);
+    const maxGrid = samples.length > 1100 ? 108 : 148;
+    const nx = clamp(Math.floor((maxX - minX) / cell) + 1, 24, maxGrid);
+    const nz = clamp(Math.floor((maxZ - minZ) / cell) + 1, 24, maxGrid);
     const sx = (maxX - minX) / (nx - 1);
     const sz = (maxZ - minZ) / (nz - 1);
-    const probeStep = 1;
+    const probeStep = samples.length > 1200 ? 3 : (samples.length > 700 ? 2 : 1);
     const curbWidth = clamp(0.22 + shoulderWidth * 0.2, 0.18, 0.95);
     const supportPad = Math.max(0.8, roadWidth * 0.46);
     const supportEdge = roadWidth * 0.5 + curbWidth + shoulderWidth + supportPad;
+    const strictProbeRadiusBase = roadWidth * 1.45 + shoulderWidth * 1.05 + curbWidth * 0.9;
+    const halfRoad = roadWidth * 0.5;
     const slopeLen = 4.8 + cliffHeight * 0.8;
     const baseY = minY - (1.4 + cliffHeight * 0.55);
     const bridgeGap = Math.max(1.05, roadThickness + 0.55);
+    const terrainUnderRoadBias = 0.14 + roadThickness * 0.05;
+    const postSmoothGap = 0.02 + roadThickness * 0.02;
     const roadClearance = clamp(
       Number.isFinite(opts.roadClearance) ? opts.roadClearance : (0.12 + roadThickness * 0.18),
       0.05,
       1.6
     );
+    const followRoad = clamp(Number.isFinite(opts.followRoad) ? opts.followRoad : 0.88, 0, 1);
     const shoulderBevelDepth = 0.16 + shoulderWidth * 0.08;
 
     const terrain = { name: 'terrain_cliffs', verts: [], uvs: [], faces: [] };
@@ -608,6 +921,26 @@
       }
       return zones;
     })();
+    const junctionZones = (() => {
+      const out = [];
+      if (!Array.isArray(branchSections) || !branchSections.length) return out;
+      const used = new Set();
+      for (const sec of branchSections) {
+        for (const i of [sec.a, sec.b]) {
+          if (!Number.isInteger(i) || i < 0 || i >= points.length || used.has(i)) continue;
+          used.add(i);
+          const p = points[i]?.pos;
+          if (!p) continue;
+          out.push({
+            x: p.x,
+            z: p.z,
+            y: p.y,
+            r: roadWidth * 0.95 + shoulderWidth * 1.05 + curbWidth * 0.95,
+          });
+        }
+      }
+      return out;
+    })();
 
     const hField = new Float64Array(nx * nz);
     const capField = new Float64Array(nx * nz);
@@ -618,18 +951,70 @@
       for (let ix = 0; ix < nx; ix++) {
         const x = minX + ix * sx;
         const z = minZ + iz * sz;
-        let d1 = 1e9, d2 = 1e9;
-        let y1 = minY, y2 = minY;
-        let b1 = 0, b2 = 0;
+        let d1 = 1e9, d2 = 1e9, d3 = 1e9, d4 = 1e9;
+        let y1 = minY, y2 = minY, y3 = minY, y4 = minY;
+        let b1 = 0, b2 = 0, b3 = 0, b4 = 0;
+        // Primary distance from road polyline segments (not only sample points),
+        // so terrain shoulders conform smoothly to the road curve shape.
+        let dSeg = 1e9;
+        let ySeg = minY;
+        let bSeg = 0;
+        let deckSegY = minY;
+        let edgeDistSeg = 1e9;
+        for (let k = 0; k < samples.length - 1; k += probeStep) {
+          const a = samples[k];
+          const b = samples[Math.min(samples.length - 1, k + probeStep)];
+          const ax = a.pos.x, az = a.pos.z;
+          const bx = b.pos.x, bz = b.pos.z;
+          const vx = bx - ax, vz = bz - az;
+          const vLen2 = vx * vx + vz * vz;
+          if (vLen2 < 1e-8) continue;
+          let t = ((x - ax) * vx + (z - az) * vz) / vLen2;
+          t = clamp(t, 0, 1);
+          const qx = ax + vx * t;
+          const qz = az + vz * t;
+          const d = Math.hypot(x - qx, z - qz);
+          if (d < dSeg) {
+            dSeg = d;
+            const yL = a.pos.y * (1 - t) + b.pos.y * t;
+            const bankL = (a.bank || 0) * (1 - t) + (b.bank || 0) * t;
+            const tx = vx / Math.sqrt(vLen2);
+            const tz = vz / Math.sqrt(vLen2);
+            const rx = -tz, rz = tx;
+            const dx = x - qx, dz = z - qz;
+            const lateral = dx * rx + dz * rz;
+            const lateralDeck = clamp(lateral, -halfRoad, halfRoad);
+            const deckY = yL + Math.tan(bankL * Math.PI / 180) * lateralDeck;
+            ySeg = yL;
+            bSeg = bankL;
+            deckSegY = deckY;
+            edgeDistSeg = Math.max(0, Math.abs(lateral) - halfRoad);
+          }
+        }
         for (let k = 0; k < samples.length; k += probeStep) {
           const p = samples[k].pos;
           const d = Math.hypot(x - p.x, z - p.z);
           if (d < d1) {
+            d4 = d3; y4 = y3; b4 = b3;
+            d3 = d2; y3 = y2; b3 = b2;
             d2 = d1; y2 = y1; b2 = b1;
             d1 = d; y1 = p.y; b1 = samples[k].bank || 0;
           } else if (d < d2) {
+            d4 = d3; y4 = y3; b4 = b3;
+            d3 = d2; y3 = y2; b3 = b2;
             d2 = d; y2 = p.y; b2 = samples[k].bank || 0;
+          } else if (d < d3) {
+            d4 = d3; y4 = y3; b4 = b3;
+            d3 = d; y3 = p.y; b3 = samples[k].bank || 0;
+          } else if (d < d4) {
+            d4 = d; y4 = p.y; b4 = samples[k].bank || 0;
           }
+        }
+        if (dSeg < d1) {
+          d4 = d3; y4 = y3; b4 = b3;
+          d3 = d2; y3 = y2; b3 = b2;
+          d2 = d1; y2 = y1; b2 = b1;
+          d1 = dSeg; y1 = ySeg; b1 = bSeg;
         }
         let crossingBoost = 0;
         let zoneLowerY = +1e9;
@@ -644,40 +1029,61 @@
           if (b > crossingBoost) crossingBoost = b;
           zoneLowerY = Math.min(zoneLowerY, cz.lowerY);
         }
+        let junctionBoost = 0;
+        let junctionY = +1e9;
+        for (const jz of junctionZones) {
+          const dd = Math.hypot(x - jz.x, z - jz.z);
+          if (dd >= jz.r) continue;
+          const t = clamp(1 - dd / Math.max(1e-6, jz.r), 0, 1);
+          const b = t * t;
+          if (b > junctionBoost) junctionBoost = b;
+          junctionY = Math.min(junctionY, jz.y);
+        }
         const crossing = ((d2 < supportEdge * 0.92) && (Math.abs(y1 - y2) > bridgeGap)) || crossingBoost > 0.015;
         const useFirst = !crossing || y1 <= y2;
         let laneY = useFirst ? y1 : y2;
         if (crossingBoost > 0.06 && zoneLowerY < 1e8) laneY = Math.min(laneY, zoneLowerY);
+        if (junctionBoost > 0.02 && junctionY < 1e8) laneY = Math.min(laneY, junctionY);
         const laneBank = useFirst ? b1 : b2;
         const bankDrop = Math.abs(Math.sin((laneBank || 0) * Math.PI / 180)) * (roadWidth * 0.56) * (1 - crossingBoost * 0.7);
-        const laneLowY = laneY - bankDrop;
+        const laneLowY = Math.min(laneY - bankDrop, deckSegY - roadClearance * 0.18);
 
         let edgeLocal =
           supportEdge +
           (crossing ? roadWidth * 1.2 + shoulderWidth * 0.8 : 0) +
-          crossingBoost * (roadWidth * 4.2 + shoulderWidth * 2.2);
+          crossingBoost * (roadWidth * 4.2 + shoulderWidth * 2.2) +
+          junctionBoost * (roadWidth * 1.35 + shoulderWidth * 1.05);
         let slopeLenLocal =
           slopeLen +
           (crossing ? roadWidth * 2.1 : 0) +
-          crossingBoost * (roadWidth * 4.8 + shoulderWidth * 2.4);
+          crossingBoost * (roadWidth * 4.8 + shoulderWidth * 2.4) +
+          junctionBoost * (roadWidth * 2.2 + shoulderWidth * 1.35);
         if (crossingBoost > 0.12 || (crossing && Math.abs(y1 - y2) > bridgeGap * 1.15)) {
           edgeLocal = Math.max(edgeLocal, supportEdge + roadWidth * 2.35 + shoulderWidth * 1.45);
           slopeLenLocal = Math.max(slopeLenLocal, slopeLen + roadWidth * 4.4 + shoulderWidth * 2.7);
         }
-        const insideT = clamp(d1 / Math.max(0.01, edgeLocal), 0, 1);
+        const dEdgeBased = Math.min(d1, edgeDistSeg + halfRoad);
+        const dForShape = d1 * (1 - followRoad) + dEdgeBased * followRoad;
+        const insideT = clamp(dForShape / Math.max(0.01, edgeLocal), 0, 1);
         const bevel = (1 - Math.cos(insideT * Math.PI)) * 0.5;
         const shoulderEdgeDrop = 0.24 + shoulderWidth * 0.09;
-        const nearRoadY = laneLowY - (roadClearance * (1 - insideT) * (1 - insideT)) - (shoulderEdgeDrop * Math.pow(bevel, 0.95));
+        const nearRoadDeck = deckSegY - (roadClearance * (1 - insideT * 0.52)) - (shoulderEdgeDrop * Math.pow(bevel, 0.95));
+        const nearRoadLane = laneLowY - (roadClearance * (1 - insideT) * (1 - insideT));
+        const nearRoadY = nearRoadLane * (1 - followRoad) + Math.min(nearRoadDeck, nearRoadLane) * followRoad;
 
-        const tfar = clamp((d1 - edgeLocal) / (margin * 0.62), 0, 1);
-        const ridge = cliffHeight * Math.pow(tfar, 1.18);
+        const tfar = clamp((dForShape - edgeLocal) / (margin * 0.62), 0, 1);
+        const ridge = cliffHeight * Math.pow(tfar, 1.16);
         const macroNoise = noise2(x * 0.16 - 13.7, z * 0.14 + 8.9);
+        const mountainNoise = Math.abs(noise2(x * 0.055 + 17.1, z * 0.051 - 11.8));
+        const ridgeNoise = Math.abs(noise2(x * 0.094 - 6.4, z * 0.088 + 9.2));
         const roughScale = 1 - 0.52 * kartStyle;
-        const terrainNoise = (noise2(x, z) * 0.7 + noise2(x * 0.73 + 4.1, z * 0.81 - 3.7) * 0.3) * 0.72 + macroNoise * 0.28;
+        const terrainNoise = (noise2(x, z) * 0.62 + noise2(x * 0.73 + 4.1, z * 0.81 - 3.7) * 0.38) * 0.72 + macroNoise * 0.28;
+        const mountainLift = (cliffHeight * (0.56 + 0.55 * roughness)) * Math.pow(tfar, 1.35) * (0.28 + mountainNoise * 0.72);
+        const ridgeLift = cliffHeight * 0.44 * Math.pow(tfar, 1.72) * Math.pow(ridgeNoise, 1.8);
         const hillNoise = terrainNoise * roughness * roughScale * (0.10 + 0.90 * Math.pow(tfar, 0.8 + 0.4 * kartStyle));
-        const hillY = baseY + ridge + hillNoise;
+        const hillY = baseY + ridge + hillNoise + mountainLift + ridgeLift;
 
-        const slopeT = clamp((d1 - edgeLocal) / slopeLenLocal, 0, 1);
+        const slopeT = clamp((dForShape - edgeLocal) / slopeLenLocal, 0, 1);
         const elev = Math.max(0, nearRoadY - baseY);
         const dropDepth = 1.2 + cliffHeight * 0.95 + elev * 0.42 + (crossing ? roadWidth * 0.45 : 0) + crossingBoost * roadWidth * 0.95;
         const crossExp = clamp(1.02 - crossingBoost * 0.38, 0.68, 1.02);
@@ -686,18 +1092,18 @@
         let y = Math.max(hillY, supportY);
 
         // Force terrain to meet road-side shoulders cleanly.
-        const joinBlend = smoothstep(edgeLocal - (1.25 + crossingBoost * 0.9), edgeLocal + (0.95 + crossingBoost * 1.2), d1);
+        const joinBlend = smoothstep(edgeLocal - (1.25 + crossingBoost * 0.9), edgeLocal + (0.95 + crossingBoost * 1.2), dForShape);
         y = nearRoadY * (1 - joinBlend) + y * joinBlend;
 
         // For stacked crossings, widen/lower the local base so the lower pass is smoother.
         if (crossing) {
-          const carve = smoothstep(roadWidth * 0.03, edgeLocal * (0.98 + 0.25 * crossingBoost), d1);
+          const carve = smoothstep(roadWidth * 0.03, edgeLocal * (0.98 + 0.25 * crossingBoost), dForShape);
           y -= (1 - carve) * (0.2 + roadWidth * 0.05 + crossingBoost * roadWidth * 0.16);
         }
 
         // Keep a wider, smoother playable apron around the road before cliffs start.
         const apronRange = slopeLenLocal * (0.45 + 0.25 * kartStyle) + shoulderWidth * (0.8 + 0.7 * kartStyle);
-        const apronT = 1 - smoothstep(edgeLocal + shoulderWidth * 0.15, edgeLocal + apronRange, d1);
+        const apronT = 1 - smoothstep(edgeLocal + shoulderWidth * 0.15, edgeLocal + apronRange, dForShape);
         const apronStrength = 0.22 + 0.42 * kartStyle;
         if (apronT > 1e-4) {
           const mix = clamp(apronT * apronStrength, 0, 0.88);
@@ -707,8 +1113,8 @@
         // Enforce a rounded, always-down outer shoulder bevel into terrain.
         const shoulderOuter = roadWidth * 0.5 + curbWidth + shoulderWidth;
         const shoulderBevelWidth = clamp(0.85 + shoulderWidth * 0.52 + crossingBoost * 0.8, 0.85, 6.8);
-        if (d1 > shoulderOuter - 0.22 && d1 < shoulderOuter + shoulderBevelWidth + 0.34) {
-          const st = smoothstep(shoulderOuter - 0.10, shoulderOuter + shoulderBevelWidth, d1);
+        if (dForShape > shoulderOuter - 0.22 && dForShape < shoulderOuter + shoulderBevelWidth + 0.34) {
+          const st = smoothstep(shoulderOuter - 0.10, shoulderOuter + shoulderBevelWidth, dForShape);
           const sround = (1 - Math.cos(st * Math.PI)) * 0.5;
           const shoulderBase = laneLowY - roadClearance * 0.62 - shoulderEdgeDrop * 0.58;
           const shoulderTarget = shoulderBase - (shoulderBevelDepth + 0.24 + crossingBoost * 0.3) * sround;
@@ -716,14 +1122,27 @@
         }
 
         // Hard safety cap: terrain must stay below nearby road deck to prevent clipping.
-        const capClear = (roadClearance * (1 - insideT * 0.35)) + 0.09 + crossingBoost * 0.14;
-        const hardCap = laneLowY - capClear;
+        const capClear = (roadClearance * (1 - insideT * 0.35)) + terrainUnderRoadBias + crossingBoost * 0.14 + junctionBoost * 0.20;
+        let hardCap = laneLowY - capClear;
+        const probeRadius = strictProbeRadiusBase + crossingBoost * (roadWidth * 1.3 + shoulderWidth * 0.9);
+        const probeDs = [d1, d2, d3, d4];
+        const probeYs = [y1, y2, y3, y4];
+        const probeBanks = [b1, b2, b3, b4];
+        for (let qi = 0; qi < 4; qi++) {
+          const pd = probeDs[qi];
+          if (!Number.isFinite(pd) || pd > probeRadius) continue;
+          const pInside = clamp(pd / Math.max(0.01, roadWidth * 0.5 + curbWidth + shoulderWidth * 0.9), 0, 1);
+          const pBankDrop = Math.abs(Math.sin((probeBanks[qi] || 0) * Math.PI / 180)) * (roadWidth * 0.58);
+          const pClear = roadClearance * (1 - pInside * 0.42) + terrainUnderRoadBias + (1 - pInside) * 0.05 + junctionBoost * 0.08;
+          const pCap = probeYs[qi] - pBankDrop - pClear;
+          if (pCap < hardCap) hardCap = pCap;
+        }
         if (y > hardCap) y = hardCap;
         const idx = iz * nx + ix;
         hField[idx] = y;
         capField[idx] = hardCap;
         dField[idx] = d1;
-        boostField[idx] = crossingBoost;
+        boostField[idx] = Math.max(crossingBoost, junctionBoost * 0.8);
       }
     }
 
@@ -757,6 +1176,10 @@
         }
       }
     }
+    for (let i = 0; i < hField.length; i++) {
+      const cap = capField[i] - postSmoothGap;
+      if (hField[i] > cap) hField[i] = cap;
+    }
 
     for (let iz = 0; iz < nz; iz++) {
       for (let ix = 0; ix < nx; ix++) {
@@ -774,8 +1197,20 @@
         const b = a + 1;
         const c = a + nx;
         const d = c + 1;
-        terrain.faces.push({ a, b: c, c: b, au: a, bu: c, cu: b });
-        terrain.faces.push({ a: b, b: c, c: d, au: b, bu: c, cu: d });
+        const pA = terrain.verts[a - 1];
+        const pB = terrain.verts[b - 1];
+        const pC = terrain.verts[c - 1];
+        const pD = terrain.verts[d - 1];
+        const dMain = Math.hypot(pA.x - pD.x, pA.y - pD.y, pA.z - pD.z);
+        const dAlt = Math.hypot(pB.x - pC.x, pB.y - pC.y, pB.z - pC.z);
+        if (dMain <= dAlt) {
+          // Keep winding consistent (up-facing normals) for the alternate diagonal.
+          terrain.faces.push({ a, b: d, c: b, au: a, bu: d, cu: b });
+          terrain.faces.push({ a, b: c, c: d, au: a, bu: c, cu: d });
+        } else {
+          terrain.faces.push({ a, b: c, c: b, au: a, bu: c, cu: b });
+          terrain.faces.push({ a: b, b: c, c: d, au: b, bu: c, cu: d });
+        }
       }
     }
     return terrain;
@@ -858,7 +1293,9 @@
     const half = roadWidth * 0.5;
     const shoulderWidth = Math.max(0.2, opts.shoulderWidth || 2.6);
     const curbHeight = Math.max(0.01, opts.curbHeight || 0.1);
+    const roadThickness = Math.max(0.02, opts.roadThickness || 0.7);
     const segCount = samples.length - 1;
+    const closedTheme = !!opts.closed;
     const curbWidth = clamp(0.22 + shoulderWidth * 0.2, 0.18, 0.95);
 
     const dists = [0];
@@ -869,12 +1306,90 @@
     const shoulderBandTs = [0.00, 0.22, 0.48, 0.74, 1.00];
     const shoulderBandCount = shoulderBandTs.length;
     const shoulderStride = shoulderBandCount * 2;
+    const nearestRoadFrame = (p) => {
+      let best = 0;
+      let bestD = 1e18;
+      for (let i = 0; i < samples.length; i++) {
+        const q = samples[i].pos;
+        const d = (p.x - q.x) * (p.x - q.x) + (p.z - q.z) * (p.z - q.z);
+        if (d < bestD) { bestD = d; best = i; }
+      }
+      return { i: best, s: samples[best], f: frames[best] };
+    };
+    const flipFace = (f) => {
+      const nb = f.c, nbu = f.cu;
+      f.c = f.b; f.cu = f.bu;
+      f.b = nb;  f.bu = nbu;
+    };
+    const enforceCurbOutwardNormals = () => {
+      const hTol = Math.max(0.006, curbHeight * 0.18);
+      const baseYBias = 0.0015 + hTol;
+      for (const face of curbs.faces) {
+        const a = curbs.verts[face.a - 1], b = curbs.verts[face.b - 1], c = curbs.verts[face.c - 1];
+        if (!a || !b || !c) continue;
+        const ctr = v3((a.x + b.x + c.x) / 3, (a.y + b.y + c.y) / 3, (a.z + b.z + c.z) / 3);
+        const n = norm(cross(sub(b, a), sub(c, a)));
+        const rf = nearestRoadFrame(ctr);
+        const p = rf.s.pos;
+        const R = rf.f.R;
+        const topY = p.y + curbHeight * 0.35;
+        const bottomY = p.y + baseYBias;
+        const isTop = ctr.y >= topY;
+        const isBottom = ctr.y <= bottomY;
+        let shouldFlip = false;
+        if (isTop) {
+          shouldFlip = n.y < 0;
+        } else if (isBottom) {
+          shouldFlip = n.y > 0;
+        } else {
+          const lateral = dot(sub(ctr, p), R);
+          const outSign = lateral >= 0 ? 1 : -1;
+          const nSign = dot(n, R) >= 0 ? 1 : -1;
+          shouldFlip = nSign !== outSign;
+        }
+        if (shouldFlip) flipFace(face);
+      }
+    };
+    const nS = samples.length;
+    const bridgeSupp = new Float32Array(nS);
+    const minSep = Math.max(14, Math.floor(nS * 0.08));
+    const hitDist = Math.max(1.8, roadWidth * 0.95 + shoulderWidth * 0.45);
+    const bridgeGap = Math.max(1.05, roadThickness + 0.55);
+    const suppWin = Math.max(2, Math.round(nS * 0.012));
+    for (let i = 0; i < nS; i += 2) {
+      const pi = samples[i].pos;
+      for (let j = i + minSep; j < nS; j += 2) {
+        const pj = samples[j].pos;
+        const d = Math.hypot(pi.x - pj.x, pi.z - pj.z);
+        if (d > hitDist) continue;
+        const dy = pi.y - pj.y;
+        if (Math.abs(dy) < bridgeGap) continue;
+        const upper = dy > 0 ? i : j;
+        const boost = clamp(1 - d / Math.max(1e-6, hitDist), 0, 1);
+        for (let k = -suppWin; k <= suppWin; k++) {
+          const idx = upper + k;
+          if (idx < 0 || idx >= nS) continue;
+          const w = boost * (1 - Math.abs(k) / (suppWin + 1));
+          if (w > bridgeSupp[idx]) bridgeSupp[idx] = w;
+        }
+      }
+    }
+    const shoulderWBy = new Float32Array(nS);
+    const curbWBy = new Float32Array(nS);
+    const curbHBy = new Float32Array(nS);
 
     for (let i = 0; i < samples.length; i++) {
       const P = samples[i].pos;
       const R = frames[i].R;
       const u = ((dists[i] / 7) % 1 + 1) % 1;
       const wig = (Math.sin(i * 0.41) + Math.cos(i * 0.29)) * 0.025;
+      const supp = clamp(bridgeSupp[i], 0, 1);
+      const shoulderW = shoulderWidth * (1 - supp);
+      const curbW = curbWidth * (1 - supp * 0.97);
+      const curbH = curbHeight * (1 - supp * 0.95);
+      shoulderWBy[i] = shoulderW;
+      curbWBy[i] = curbW;
+      curbHBy[i] = curbH;
       const shoulderDropInner = 0.09;
       const shoulderDropOuter = 0.36 + shoulderWidth * 0.04;
       for (let bi = 0; bi < shoulderBandCount; bi++) {
@@ -883,7 +1398,7 @@
         const drop = shoulderDropInner + (shoulderDropOuter - shoulderDropInner) * round;
         const wigScale = (1 - t) * 0.9 + 0.1;
         const yOff = -drop + wig * wigScale;
-        const d = half + curbWidth + shoulderWidth * t;
+        const d = half + curbW + shoulderW * t;
         shoulders.verts.push(add(add(P, mul(R, d)), v3(0, yOff, 0)));
         shoulders.uvs.push({ u, v: t });
       }
@@ -893,23 +1408,32 @@
         const drop = shoulderDropInner + (shoulderDropOuter - shoulderDropInner) * round;
         const wigScale = (1 - t) * 0.9 + 0.1;
         const yOff = -drop + wig * wigScale;
-        const d = half + curbWidth + shoulderWidth * t;
+        const d = half + curbW + shoulderW * t;
         shoulders.verts.push(add(add(P, mul(R, -d)), v3(0, yOff, 0)));
         shoulders.uvs.push({ u, v: t });
       }
 
       const clI = add(P, mul(R, half + 0.03));
-      const clO = add(P, mul(R, half + curbWidth));
+      const clO = add(P, mul(R, half + curbW));
       const crI = add(P, mul(R, -half - 0.03));
-      const crO = add(P, mul(R, -half - curbWidth));
-      const lift = v3(0, curbHeight, 0);
-      curbs.verts.push(add(clI, lift)); curbs.uvs.push({ u, v: 0 });
-      curbs.verts.push(add(clO, lift)); curbs.uvs.push({ u, v: 1 });
-      curbs.verts.push(add(crI, lift)); curbs.uvs.push({ u, v: 0 });
-      curbs.verts.push(add(crO, lift)); curbs.uvs.push({ u, v: 1 });
+      const crO = add(P, mul(R, -half - curbW));
+      const topLift = v3(0, curbH, 0);
+      const baseLift = v3(0, 0.0015, 0);
+      // 8 verts/sample for solid curb ribbons:
+      // L inner top, L outer top, R inner top, R outer top, L inner base, L outer base, R inner base, R outer base
+      curbs.verts.push(add(clI, topLift));  curbs.uvs.push({ u, v: 0 });
+      curbs.verts.push(add(clO, topLift));  curbs.uvs.push({ u, v: 1 });
+      curbs.verts.push(add(crI, topLift));  curbs.uvs.push({ u, v: 0 });
+      curbs.verts.push(add(crO, topLift));  curbs.uvs.push({ u, v: 1 });
+      curbs.verts.push(add(clI, baseLift)); curbs.uvs.push({ u, v: 0 });
+      curbs.verts.push(add(clO, baseLift)); curbs.uvs.push({ u, v: 1 });
+      curbs.verts.push(add(crI, baseLift)); curbs.uvs.push({ u, v: 0 });
+      curbs.verts.push(add(crO, baseLift)); curbs.uvs.push({ u, v: 1 });
     }
 
     for (let i = 0; i < segCount; i++) {
+      const segSupp = Math.max(bridgeSupp[i], bridgeSupp[i + 1]);
+      if (segSupp > 0.96) continue;
       const s0 = i * shoulderStride + 1;
       const s1 = (i + 1) * shoulderStride + 1;
       for (let band = 0; band < shoulderBandCount - 1; band++) {
@@ -929,14 +1453,131 @@
         meshAddTri(shoulders, a0, a1, b1);
       }
 
-      const c0 = i * 4 + 1;
-      const c1 = (i + 1) * 4 + 1;
-      meshAddTri(curbs, c0, c1 + 1, c0 + 1);
-      meshAddTri(curbs, c0, c1, c1 + 1);
+      const c0 = i * 8 + 1;
+      const c1 = (i + 1) * 8 + 1;
+      // Left top strip
+      meshAddTri(curbs, c0 + 0, c1 + 1, c0 + 1);
+      meshAddTri(curbs, c0 + 0, c1 + 0, c1 + 1);
+      // Left base strip
+      meshAddTri(curbs, c0 + 4, c0 + 5, c1 + 5);
+      meshAddTri(curbs, c0 + 4, c1 + 5, c1 + 4);
+      // Left inner wall
+      meshAddTri(curbs, c0 + 0, c0 + 4, c1 + 4);
+      meshAddTri(curbs, c0 + 0, c1 + 4, c1 + 0);
+      // Left outer wall
+      meshAddTri(curbs, c0 + 1, c1 + 1, c1 + 5);
+      meshAddTri(curbs, c0 + 1, c1 + 5, c0 + 5);
+
+      // Right top strip
       meshAddTri(curbs, c0 + 2, c0 + 3, c1 + 3);
       meshAddTri(curbs, c0 + 2, c1 + 3, c1 + 2);
+      // Right base strip
+      meshAddTri(curbs, c0 + 6, c1 + 7, c0 + 7);
+      meshAddTri(curbs, c0 + 6, c1 + 6, c1 + 7);
+      // Right inner wall
+      meshAddTri(curbs, c0 + 2, c1 + 2, c1 + 6);
+      meshAddTri(curbs, c0 + 2, c1 + 6, c0 + 6);
+      // Right outer wall
+      meshAddTri(curbs, c0 + 3, c0 + 7, c1 + 7);
+      meshAddTri(curbs, c0 + 3, c1 + 7, c1 + 3);
+    }
+    if (!closedTheme && samples.length >= 2) {
+      const s0 = 1;
+      const sN = (samples.length - 1) * 8 + 1;
+      // Start caps
+      meshAddTri(curbs, s0 + 0, s0 + 5, s0 + 4);
+      meshAddTri(curbs, s0 + 0, s0 + 1, s0 + 5);
+      meshAddTri(curbs, s0 + 2, s0 + 6, s0 + 7);
+      meshAddTri(curbs, s0 + 2, s0 + 7, s0 + 3);
+      // End caps
+      meshAddTri(curbs, sN + 0, sN + 4, sN + 5);
+      meshAddTri(curbs, sN + 0, sN + 5, sN + 1);
+      meshAddTri(curbs, sN + 2, sN + 7, sN + 6);
+      meshAddTri(curbs, sN + 2, sN + 3, sN + 7);
     }
 
+    // Fill shoulder/curb around branch junctions so all surfaces meet cleanly.
+    if (Array.isArray(branchSections) && branchSections.length) {
+      const used = new Set();
+      const junctionIdx = [];
+      for (const sec of branchSections) {
+        for (const i of [sec.a, sec.b]) {
+          if (!Number.isInteger(i) || i < 0 || i >= points.length || used.has(i)) continue;
+          used.add(i);
+          junctionIdx.push(i);
+        }
+      }
+      const steps = 20;
+      const addStrip = (mesh, inner, outer, flip = false) => {
+        const n = Math.min(inner.length, outer.length);
+        if (n < 3) return;
+        for (let i = 0; i < n; i++) {
+          const j = (i + 1) % n;
+          const a0 = inner[i], a1 = inner[j];
+          const b0 = outer[i], b1 = outer[j];
+          if (!flip) {
+            meshAddTri(mesh, a0, b0, b1);
+            meshAddTri(mesh, a0, b1, a1);
+          } else {
+            meshAddTri(mesh, a0, b1, b0);
+            meshAddTri(mesh, a0, a1, b1);
+          }
+        }
+      };
+      for (const idx of junctionIdx) {
+        if (bridgeSupp[idx] > 0.90) continue;
+        const p = points[idx]?.pos;
+        if (!p) continue;
+        let t = tangentAtIndex(idx);
+        t = norm(v3(t.x, 0, t.z));
+        if (Math.hypot(t.x, t.z) < 1e-6) t = v3(1, 0, 0);
+        const r = norm(v3(-t.z, 0, t.x));
+
+        const curbInnerR = half + 0.03;
+        const curbOuterR = half + curbWBy[idx];
+        const curbInnerTop = [];
+        const curbOuterTop = [];
+        const curbInnerBase = [];
+        const curbOuterBase = [];
+        const curbLift = curbHBy[idx];
+        for (let k = 0; k < steps; k++) {
+          const a = (k / steps) * Math.PI * 2;
+          const ca = Math.cos(a), sa = Math.sin(a);
+          const inOff = add(mul(r, ca * curbInnerR), mul(t, sa * curbInnerR));
+          const outOff = add(mul(r, ca * curbOuterR), mul(t, sa * curbOuterR));
+          curbInnerTop.push(meshAddVertex(curbs, v3(p.x + inOff.x, p.y + curbLift, p.z + inOff.z), k / steps, 0));
+          curbOuterTop.push(meshAddVertex(curbs, v3(p.x + outOff.x, p.y + curbLift, p.z + outOff.z), k / steps, 1));
+          curbInnerBase.push(meshAddVertex(curbs, v3(p.x + inOff.x, p.y + 0.0015, p.z + inOff.z), k / steps, 0));
+          curbOuterBase.push(meshAddVertex(curbs, v3(p.x + outOff.x, p.y + 0.0015, p.z + outOff.z), k / steps, 1));
+        }
+        addStrip(curbs, curbInnerTop, curbOuterTop, false);
+        addStrip(curbs, curbInnerBase, curbOuterBase, true);
+        addStrip(curbs, curbInnerTop, curbInnerBase, false);
+        addStrip(curbs, curbOuterTop, curbOuterBase, true);
+
+        const grassTs = [0.00, 0.50, 1.00];
+        const grassRings = [];
+        for (let gi = 0; gi < grassTs.length; gi++) {
+          const tt = grassTs[gi];
+          const rr = half + curbWBy[idx] + shoulderWBy[idx] * tt;
+          const round = (1 - Math.cos(tt * Math.PI * 0.96)) * 0.5;
+          const drop = 0.09 + (0.36 + shoulderWidth * 0.04 - 0.09) * round;
+          const y = p.y - drop;
+          const ring = [];
+          for (let k = 0; k < steps; k++) {
+            const a = (k / steps) * Math.PI * 2;
+            const ca = Math.cos(a), sa = Math.sin(a);
+            const off = add(mul(r, ca * rr), mul(t, sa * rr));
+            ring.push(meshAddVertex(shoulders, v3(p.x + off.x, y, p.z + off.z), k / steps, tt));
+          }
+          grassRings.push(ring);
+        }
+        addStrip(shoulders, grassRings[0], grassRings[1], false);
+        addStrip(shoulders, grassRings[1], grassRings[2], false);
+      }
+    }
+
+    enforceCurbOutwardNormals();
     if (shoulders.faces.length) out.push({ mesh: shoulders, kind: 'grass' });
     if (curbs.faces.length) out.push({ mesh: curbs, kind: 'curb' });
     return out;
@@ -1098,13 +1739,22 @@
     { pos: v3(-2, 0, 4), bank: 0, node: 'smooth', hin: { x: -1.2, z: 0 }, hout: { x: 1.2, z: 0 } },
   ];
   let selected = -1;
+  let selectedBranch = null; // { sec:number, mid:number }
+  let selectedBranchSet = new Set(); // key: "sec:mid"
+  let selectedSet = new Set();
   let dragIndex = null;
+  let dragBranch = null; // { sec:number, mid:number }
+  let dragBranchGroupOffsets = null; // [{sec,mid,dx,dz}]
+  let dragGroupOffsets = null;
   let dragHandle = null; // {i, which:'in'|'out', len:number}
   let pan2 = { x: 0, y: 0 };
   let isPanning2 = false;
   let last2 = null;
   let cached = null;
-  let ySplitTool = { phase: 0, startIdx: -1 };
+  let joinTool = { phase: 0, startIdx: -1 };
+  let ySplitTool = { phase: 0, startIdx: -1, action: 'split' };
+  let splitEnds = [];
+  let branchSections = []; // { a:number, b:number, kind:'join'|'fork', bend:number, lift:number, mids:[{u,x,y,z}] }
   let roundTool = { phase: 0, startIdx: -1, center: null, radius: 0, dir: 1, isSizing: false, previewExit: null };
   let placedTrees = [];   // { pos:v3, scale:number }
   let placedFences = [];  // { a:v3, b:v3 }
@@ -1151,6 +1801,26 @@
       placedFences: cloneFences(placedFences),
       fencePlaceStart: fencePlaceStart ? v3(fencePlaceStart.x, fencePlaceStart.y, fencePlaceStart.z) : null,
       selected,
+      selectedIndices: Array.from(selectedSet),
+      selectedBranchIndices: Array.from(selectedBranchSet),
+      splitEnds: Array.from(splitEnds),
+      branchSections: branchSections.map((s) => ({
+        a: s.a,
+        b: s.b,
+        kind: s.kind || 'join',
+        bend: Number(s.bend || 0),
+        lift: Number(s.lift || 0),
+        mids: Array.isArray(s.mids) ? s.mids.map((m) => ({
+          u: Number(m.u || 0),
+          x: Number(m.x || 0),
+          y: Number(m.y || 0),
+          z: Number(m.z || 0),
+          bevel: Number(m.bevel ?? 0.55),
+          node: m.node || 'smooth',
+          hin: { x: Number(m.hin?.x || 0), z: Number(m.hin?.z || 0) },
+          hout: { x: Number(m.hout?.x || 0), z: Number(m.hout?.z || 0) },
+        })) : [],
+      })),
       pan2: { x: pan2.x, y: pan2.y },
       cam: { camEye: v3(camEye.x, camEye.y, camEye.z), camYaw, camPitch, camMoveSpeed },
     };
@@ -1161,6 +1831,28 @@
     placedFences = cloneFences(s.placedFences || []);
     fencePlaceStart = s.fencePlaceStart ? v3(s.fencePlaceStart.x, s.fencePlaceStart.y, s.fencePlaceStart.z) : null;
     selected = typeof s.selected === 'number' ? s.selected : -1;
+    selectedSet = new Set((s.selectedIndices || []).filter((i) => Number.isInteger(i) && i >= 0 && i < points.length));
+    if (selected >= 0) selectedSet.add(selected);
+    selectedBranchSet = new Set((s.selectedBranchIndices || []).filter((k) => typeof k === 'string'));
+    selectedBranch = null;
+    splitEnds = Array.from(new Set((s.splitEnds || []).filter((i) => Number.isInteger(i) && i >= 0 && i < points.length)));
+    branchSections = Array.isArray(s.branchSections) ? s.branchSections.map((x) => ({
+      a: Number(x.a),
+      b: Number(x.b),
+      kind: x.kind === 'fork' ? 'fork' : 'join',
+      bend: Number(x.bend || 0),
+      lift: Number(x.lift || 0),
+      mids: Array.isArray(x.mids) ? x.mids.map((m) => ({
+        u: Number(m.u || 0),
+        x: Number(m.x || 0),
+        y: Number(m.y || 0),
+        z: Number(m.z || 0),
+        bevel: Number(m.bevel ?? 0.55),
+        node: m.node || 'smooth',
+        hin: { x: Number(m.hin?.x || 0), z: Number(m.hin?.z || 0) },
+        hout: { x: Number(m.hout?.x || 0), z: Number(m.hout?.z || 0) },
+      })) : [],
+    })) : [];
     pan2 = { x: Number(s.pan2?.x || 0), y: Number(s.pan2?.y || 0) };
     if (s.cam) {
       // Back-compat: camTarget/camDist snapshots from earlier builds.
@@ -1178,9 +1870,15 @@
       camMoveSpeed = Number(s.cam.camMoveSpeed ?? camMoveSpeed);
     }
     dragIndex = null;
+    dragBranch = null;
+    dragBranchGroupOffsets = null;
+    dragGroupOffsets = null;
     dragHandle = null;
-    ySplitTool = { phase: 0, startIdx: -1 };
+    joinTool = { phase: 0, startIdx: -1 };
+    ySplitTool = { phase: 0, startIdx: -1, action: 'split' };
     roundTool = { phase: 0, startIdx: -1, center: null, radius: 0, dir: 1, isSizing: false, previewExit: null };
+    sanitizeBranchSections();
+    selectedBranch = null;
     if (mode !== 'fenceplace') fencePlaceStart = null;
     gizmo.active = false;
     gizmoHoverAxis = null;
@@ -1244,13 +1942,39 @@
       }
     }
 
-    // Delete selected point
+    // Delete selected point(s)
     if ((e.key === 'Delete' || e.key === 'Backspace') && !isTypingTarget(document.activeElement)) {
-      if (selected >= 0) {
+      sanitizeBranchSelection();
+      if (selectedBranchSet.size || selectedBranch) {
         e.preventDefault();
         pushUndo();
-        points = points.filter((_, i) => i !== selected);
+        const all = selectedBranchSet.size ? Array.from(selectedBranchSet) : [branchSelKey(selectedBranch.sec, selectedBranch.mid)];
+        const pairs = all.map(parseBranchSelKey).filter(Boolean)
+          .sort((a, b) => (b.sec - a.sec) || (b.mid - a.mid));
+        for (const p of pairs) {
+          const mids = branchSections[p.sec]?.mids;
+          if (!Array.isArray(mids) || !mids[p.mid]) continue;
+          mids.splice(p.mid, 1);
+        }
+        sanitizeBranchSections();
+        selectedBranch = null;
+        selectedBranchSet.clear();
+        syncSelectedUI();
+        cached = null;
+        return;
+      }
+      if (selectedSet.size > 0 || selected >= 0) {
+        e.preventDefault();
+        pushUndo();
+        const del = selectedSet.size ? new Set(selectedSet) : new Set(selected >= 0 ? [selected] : []);
+        const idxs = Array.from(del).sort((a, b) => b - a);
+        for (const idx of idxs) {
+          if (idx < 0 || idx >= points.length) continue;
+          points.splice(idx, 1);
+          remapSplitEndsForSplice(idx, 1, 0);
+        }
         selected = -1;
+        selectedSet.clear();
         syncSelectedUI();
         cached = null;
       }
@@ -1278,6 +2002,179 @@
     return best;
   }
 
+  function closestPointOnScreenSegment(sx, sy, ax, ay, bx, by) {
+    const vx = bx - ax;
+    const vy = by - ay;
+    const len2 = vx * vx + vy * vy;
+    if (len2 < 1e-8) return { t: 0, x: ax, y: ay, d: Math.hypot(sx - ax, sy - ay) };
+    let t = ((sx - ax) * vx + (sy - ay) * vy) / len2;
+    t = clamp(t, 0, 1);
+    const x = ax + vx * t;
+    const y = ay + vy * t;
+    return { t, x, y, d: Math.hypot(sx - x, sy - y) };
+  }
+
+  function nearestCurveHitScreen(sx, sy, org, s, maxPix = 12) {
+    const n = points.length;
+    if (n < 2) return null;
+    const closed = chk('closed');
+    ensureHandles(points);
+    const segs = closed ? n : n - 1;
+    const steps = Math.max(10, Math.min(48, Math.round(effectiveSubdiv() * 2)));
+    let best = null;
+
+    for (let i = 0; i < segs; i++) {
+      const a = points[i];
+      const b = points[(i + 1) % n];
+      const p0 = a.pos;
+      const p1 = b.pos;
+      const c0 = add(p0, v3(a.hout.x, 0, a.hout.z));
+      const c1 = add(p1, v3(b.hin.x, 0, b.hin.z));
+      let prev = bezier(p0, c0, c1, p1, 0);
+      let prevSp = screenFromWorld2(prev, org, s);
+      for (let k = 1; k <= steps; k++) {
+        const t1 = k / steps;
+        const cur = bezier(p0, c0, c1, p1, t1);
+        const curSp = screenFromWorld2(cur, org, s);
+        const hit = closestPointOnScreenSegment(sx, sy, prevSp.x, prevSp.y, curSp.x, curSp.y);
+        if (hit.d <= maxPix && (!best || hit.d < best.dist)) {
+          const t0 = (k - 1) / steps;
+          const t = t0 + (t1 - t0) * hit.t;
+          const pos = bezier(p0, c0, c1, p1, t);
+          const tan = bezierDeriv(p0, c0, c1, p1, t);
+          best = {
+            dist: hit.d,
+            seg: i,
+            t,
+            pos,
+            tan,
+            insertIndex: i + 1,
+            bank: (1 - t) * a.bank + t * b.bank,
+          };
+        }
+        prev = cur;
+        prevSp = curSp;
+      }
+    }
+    return best;
+  }
+
+
+  function selectOnly(i) {
+    selectedBranch = null;
+    selectedBranchSet.clear();
+    selected = i;
+    selectedSet.clear();
+    if (i >= 0) selectedSet.add(i);
+  }
+
+  function branchSelKey(sec, mid) { return `${sec}:${mid}`; }
+  function parseBranchSelKey(k) {
+    const m = /^(-?\d+):(-?\d+)$/.exec(String(k || ''));
+    if (!m) return null;
+    return { sec: Number(m[1]), mid: Number(m[2]) };
+  }
+  function sanitizeBranchSelection() {
+    const next = new Set();
+    for (const key of selectedBranchSet) {
+      const p = parseBranchSelKey(key);
+      if (!p) continue;
+      if (p.sec < 0 || p.mid < 0) continue;
+      if (!branchSections[p.sec]?.mids?.[p.mid]) continue;
+      next.add(branchSelKey(p.sec, p.mid));
+    }
+    selectedBranchSet = next;
+    if (selectedBranch) {
+      const key = branchSelKey(selectedBranch.sec, selectedBranch.mid);
+      if (!selectedBranchSet.has(key)) {
+        if (branchSections[selectedBranch.sec]?.mids?.[selectedBranch.mid]) selectedBranchSet.add(key);
+        else selectedBranch = null;
+      }
+    }
+  }
+
+  function selectBranchMidpoint(sec, mid) {
+    selected = -1;
+    selectedSet.clear();
+    selectedBranchSet.clear();
+    selectedBranchSet.add(branchSelKey(sec, mid));
+    selectedBranch = { sec, mid };
+  }
+
+  function toggleBranchSelection(sec, mid) {
+    selected = -1;
+    selectedSet.clear();
+    const key = branchSelKey(sec, mid);
+    if (selectedBranchSet.has(key)) selectedBranchSet.delete(key);
+    else selectedBranchSet.add(key);
+    if (selectedBranchSet.size) {
+      const first = parseBranchSelKey(Array.from(selectedBranchSet).sort()[0]);
+      selectedBranch = first ? { sec: first.sec, mid: first.mid } : null;
+    } else {
+      selectedBranch = null;
+    }
+  }
+
+  function collectActiveBranchSelection(anchor = null) {
+    const out = [];
+    sanitizeBranchSelection();
+    if (selectedBranchSet.size) {
+      for (const k of Array.from(selectedBranchSet).sort()) {
+        const p = parseBranchSelKey(k);
+        if (!p) continue;
+        if (branchSections[p.sec]?.mids?.[p.mid]) out.push({ sec: p.sec, mid: p.mid });
+      }
+    }
+    if (!out.length && anchor && branchSections[anchor.sec]?.mids?.[anchor.mid]) out.push(anchor);
+    if (!out.length && selectedBranch && branchSections[selectedBranch.sec]?.mids?.[selectedBranch.mid]) out.push({ sec: selectedBranch.sec, mid: selectedBranch.mid });
+    return out;
+  }
+
+  function toggleSelection(i) {
+    if (i < 0) return;
+    selectedBranch = null;
+    selectedBranchSet.clear();
+    if (selectedSet.has(i)) selectedSet.delete(i);
+    else selectedSet.add(i);
+    selected = selectedSet.size ? Array.from(selectedSet).sort((a, b) => a - b)[0] : -1;
+  }
+
+  function collectActiveSelection(anchorIndex = -1) {
+    const out = selectedSet.size ? Array.from(selectedSet).sort((a, b) => a - b) : [];
+    if (!out.length && anchorIndex >= 0) out.push(anchorIndex);
+    if (!out.length && selected >= 0) out.push(selected);
+    return out;
+  }
+
+  function selYRange() {
+    const lo = Number($('selY').min);
+    const hi = Number($('selY').max);
+    return {
+      lo: Number.isFinite(lo) ? lo : -20,
+      hi: Number.isFinite(hi) ? hi : 40,
+    };
+  }
+
+  function applyHeightDeltaToMainSelection(delta) {
+    const { lo, hi } = selYRange();
+    for (const idx of collectActiveSelection()) {
+      const p = points[idx];
+      if (!p) continue;
+      p.pos.y = clamp(Number(p.pos.y || 0) + delta, lo, hi);
+    }
+  }
+
+  function applyHeightDeltaToBranchSelection(delta) {
+    sanitizeBranchSelection();
+    const { lo, hi } = selYRange();
+    const active = collectActiveBranchSelection();
+    for (const a of active) {
+      const m = branchSections[a.sec]?.mids?.[a.mid];
+      if (!m) continue;
+      m.y = clamp(Number(m.y || 0) + delta, lo, hi);
+    }
+  }
+
   function handleWorld(i, which) {
     const p = points[i];
     ensurePointShape(p);
@@ -1285,18 +2182,51 @@
     return v3(p.pos.x + (h?.x || 0), p.pos.y, p.pos.z + (h?.z || 0));
   }
 
+  function branchMidRef(sel = selectedBranch) {
+    if (!sel) return null;
+    const sec = branchSections[sel.sec];
+    const mid = sec?.mids?.[sel.mid];
+    if (!sec || !mid) return null;
+    return { sec, mid };
+  }
+
+  function branchHandleWorld(sel, which) {
+    const ref = branchMidRef(sel);
+    if (!ref) return null;
+    const m = ref.mid;
+    const h = which === 'in' ? m.hin : m.hout;
+    return v3(m.x + (h?.x || 0), m.y, m.z + (h?.z || 0));
+  }
+
   function nearestHandle2D(sx, sy, org, s, maxPix) {
+    if (selectedBranch) {
+      const hiW = branchHandleWorld(selectedBranch, 'in');
+      const hoW = branchHandleWorld(selectedBranch, 'out');
+      if (hiW && hoW) {
+        const hi = screenFromWorld2(hiW, org, s);
+        const ho = screenFromWorld2(hoW, org, s);
+        const di = Math.hypot(hi.x - sx, hi.y - sy);
+        const doo = Math.hypot(ho.x - sx, ho.y - sy);
+        if (di <= maxPix) return { kind: 'branch', sec: selectedBranch.sec, mid: selectedBranch.mid, which: 'in' };
+        if (doo <= maxPix) return { kind: 'branch', sec: selectedBranch.sec, mid: selectedBranch.mid, which: 'out' };
+      }
+    }
     if (selected < 0) return null;
     const hi = screenFromWorld2(handleWorld(selected, 'in'), org, s);
     const ho = screenFromWorld2(handleWorld(selected, 'out'), org, s);
     const di = Math.hypot(hi.x - sx, hi.y - sy);
     const doo = Math.hypot(ho.x - sx, ho.y - sy);
-    if (di <= maxPix) return { i: selected, which: 'in' };
-    if (doo <= maxPix) return { i: selected, which: 'out' };
+    if (di <= maxPix) return { kind: 'main', i: selected, which: 'in' };
+    if (doo <= maxPix) return { kind: 'main', i: selected, which: 'out' };
     return null;
   }
 
   function snapXZ(x, z, g) { return { x: Math.round(x / g) * g, z: Math.round(z / g) * g }; }
+  function maybeSnapXZ(x, z) {
+    if (!chk('roadIsoSnap')) return { x, z };
+    const g = Math.max(0.01, num('grid'));
+    return snapXZ(x, z, g);
+  }
 
   function tangentAtIndex(i) {
     if (points.length < 2) return v3(1, 0, 0);
@@ -1307,8 +2237,179 @@
     return norm(t);
   }
 
+  function smoothPointHandles(i) {
+    if (i < 0 || i >= points.length) return;
+    const closed = chk('closed');
+    const n = points.length;
+    const p = points[i];
+    ensurePointShape(p);
+    p.node = 'smooth';
+    const pi = closed ? (i - 1 + n) % n : (i > 0 ? i - 1 : -1);
+    const ni = closed ? (i + 1) % n : (i < n - 1 ? i + 1 : -1);
+    const prev = pi >= 0 ? points[pi] : null;
+    const next = ni >= 0 ? points[ni] : null;
+    const inVec = prev ? sub(p.pos, prev.pos) : v3(0, 0, 0);
+    const outVec = next ? sub(next.pos, p.pos) : v3(0, 0, 0);
+
+    let t;
+    if (prev && next) t = norm(add(norm(inVec), norm(outVec)));
+    else if (next) t = norm(outVec);
+    else if (prev) t = norm(inVec);
+    else t = v3(1, 0, 0);
+    if (len(t) < 1e-6) t = v3(1, 0, 0);
+
+    const inLen = prev ? Math.max(0.05, len(inVec) * 0.30) : 0.8;
+    const outLen = next ? Math.max(0.05, len(outVec) * 0.30) : 0.8;
+    p.hin = { x: -t.x * inLen, z: -t.z * inLen };
+    p.hout = { x: t.x * outLen, z: t.z * outLen };
+  }
+
+  function smoothNeighborhood(indices) {
+    const unique = Array.from(new Set(indices.filter((i) => Number.isInteger(i) && i >= 0 && i < points.length)));
+    for (const i of unique) smoothPointHandles(i);
+  }
+
+  function smoothAllPointHandles() {
+    for (let i = 0; i < points.length; i++) smoothPointHandles(i);
+  }
+
   function mkCtrlPoint(x, y, z, bank = 0) {
     return { pos: v3(x, y, z), bank, node: 'smooth', hin: { x: 0, z: 0 }, hout: { x: 0, z: 0 } };
+  }
+
+  function cloneCtrlPoint(p) {
+    ensurePointShape(p);
+    return {
+      pos: v3(p.pos.x, p.pos.y, p.pos.z),
+      bank: Number(p.bank || 0),
+      node: p.node || 'smooth',
+      hin: { x: Number(p.hin?.x || 0), z: Number(p.hin?.z || 0) },
+      hout: { x: Number(p.hout?.x || 0), z: Number(p.hout?.z || 0) },
+    };
+  }
+
+  function sanitizeSplitEnds() {
+    splitEnds = Array.from(new Set(splitEnds.filter((i) => Number.isInteger(i) && i >= 0 && i < points.length)));
+  }
+
+  function sanitizeBranchSections() {
+    const seen = new Set();
+    const next = [];
+    for (const s of branchSections) {
+      const a = Number(s?.a);
+      const b = Number(s?.b);
+      if (!Number.isInteger(a) || !Number.isInteger(b)) continue;
+      if (a < 0 || b < 0 || a >= points.length || b >= points.length || a === b) continue;
+      const kind = s?.kind === 'fork' ? 'fork' : 'join';
+      const lo = Math.min(a, b), hi = Math.max(a, b);
+      const key = `${kind}:${lo}:${hi}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      next.push({
+        a, b, kind,
+        bend: Number.isFinite(s?.bend) ? Number(s.bend) : 1,
+        lift: Number.isFinite(s?.lift) ? Number(s.lift) : 0.8,
+        mids: Array.isArray(s?.mids)
+          ? s.mids
+            .map((m) => ({
+              u: clamp(Number(m?.u || 0), 0.001, 0.999),
+              x: Number(m?.x || 0),
+              y: Number(m?.y || 0),
+              z: Number(m?.z || 0),
+              bevel: clamp(Number.isFinite(m?.bevel) ? Number(m.bevel) : 0.55, 0, 1),
+              node: (m?.node === 'aligned' || m?.node === 'corner') ? m.node : 'smooth',
+              hin: { x: Number(m?.hin?.x || 0), z: Number(m?.hin?.z || 0) },
+              hout: { x: Number(m?.hout?.x || 0), z: Number(m?.hout?.z || 0) },
+            }))
+            .filter((m) => Number.isFinite(m.x) && Number.isFinite(m.y) && Number.isFinite(m.z) && Number.isFinite(m.hin.x) && Number.isFinite(m.hin.z) && Number.isFinite(m.hout.x) && Number.isFinite(m.hout.z))
+            .sort((m1, m2) => m1.u - m2.u)
+          : [],
+      });
+    }
+    branchSections = next;
+  }
+
+  function remapBranchSectionsForSplice(start, deleteCount, insertCount) {
+    const delta = insertCount - deleteCount;
+    const cutEnd = start + deleteCount;
+    const mapIdx = (idx) => {
+      if (!Number.isInteger(idx)) return -1;
+      if (idx < start) return idx;
+      if (idx >= cutEnd) return idx + delta;
+      return -1;
+    };
+    branchSections = branchSections.map((s) => ({
+      ...s,
+      a: mapIdx(s.a),
+      b: mapIdx(s.b),
+    }));
+    sanitizeBranchSections();
+  }
+
+  function remapSplitEndsForSplice(start, deleteCount, insertCount, insertedRel = []) {
+    const next = [];
+    const delta = insertCount - deleteCount;
+    const cutEnd = start + deleteCount;
+    for (const idx of splitEnds) {
+      if (!Number.isInteger(idx)) continue;
+      if (idx < start) next.push(idx);
+      else if (idx >= cutEnd) next.push(idx + delta);
+    }
+    for (const rel of insertedRel) next.push(start + rel);
+    splitEnds = next;
+    sanitizeSplitEnds();
+    remapBranchSectionsForSplice(start, deleteCount, insertCount);
+  }
+
+  function addBranchSection(iA, iB, kind = 'join') {
+    if (iA === iB) return false;
+    if (!Number.isInteger(iA) || !Number.isInteger(iB)) return false;
+    if (iA < 0 || iB < 0 || iA >= points.length || iB >= points.length) return false;
+    const A = points[iA]?.pos;
+    const B = points[iB]?.pos;
+    if (!A || !B) return false;
+    const d = Math.hypot(B.x - A.x, B.z - A.z);
+    const liftBase = Math.max(num('roadThickness') * 1.25, 0.7);
+    const sec = {
+      a: iA,
+      b: iB,
+      kind: kind === 'fork' ? 'fork' : 'join',
+      bend: iA < iB ? 1 : -1,
+      lift: liftBase + Math.min(2.4, d * 0.035),
+      mids: [],
+    };
+    branchSections.push(sec);
+    sanitizeBranchSections();
+    if (sec.kind === 'fork') {
+      splitEnds.push(iA, iB);
+      sanitizeSplitEnds();
+    } else {
+      splitEnds = splitEnds.filter((idx) => idx !== iA && idx !== iB);
+      sanitizeSplitEnds();
+    }
+    return true;
+  }
+
+  function splitPointForFork(i) {
+    if (!Number.isInteger(i) || i < 0 || i >= points.length) return false;
+    const src = points[i];
+    if (!src) return false;
+    const dupe = cloneCtrlPoint(src);
+    const t = tangentAtIndex(i);
+    const n = norm(v3(-t.z, 0, t.x));
+    const side = (Math.hypot(n.x, n.z) > 1e-5) ? n : v3(1, 0, 0);
+    const sep = clamp(num('roadWidth') * 0.55, 0.35, 2.8);
+    src.pos.x += side.x * sep * 0.5;
+    src.pos.z += side.z * sep * 0.5;
+    dupe.pos.x -= side.x * sep * 0.5;
+    dupe.pos.z -= side.z * sep * 0.5;
+    points.splice(i + 1, 0, dupe);
+    remapSplitEndsForSplice(i + 1, 0, 1);
+    splitEnds.push(i, i + 1);
+    sanitizeSplitEnds();
+    smoothNeighborhood([i - 1, i, i + 1, i + 2]);
+    selectOnly(i + 1);
+    return true;
   }
 
   function insertYSplitModule(iA, iB) {
@@ -1331,10 +2432,42 @@
       return mkCtrlPoint(px, py, pz, 0);
     };
 
-    // Single-loop approximation of a split/rejoin section; fully editable after insertion.
-    const modulePts = [p(0.18, 0.75), p(0.40, 1.08), p(0.64, 0.45), p(0.66, -0.45), p(0.42, -1.08), p(0.20, -0.75)];
-    points.splice(a + 1, Math.max(0, b - a - 1), ...modulePts);
-    selected = a + Math.ceil(modulePts.length / 2);
+    // Fork profile tuned to read as a clear Y split in top view.
+    const modulePts = [
+      p(0.12, 0.06),
+      p(0.28, 0.82),
+      p(0.47, 1.30),
+      p(0.71, 0.50),
+      p(0.73, -0.50),
+      p(0.49, -1.30),
+      p(0.31, -0.82),
+      p(0.14, -0.06),
+    ];
+    const start = a + 1;
+    const delCount = Math.max(0, b - a - 1);
+    points.splice(start, delCount, ...modulePts);
+    remapSplitEndsForSplice(start, delCount, modulePts.length, [2, 5]);
+    selectOnly(a + Math.ceil(modulePts.length / 2));
+  }
+
+  function trimSection(iA, iB) {
+    if (iA === iB) return false;
+    let a = iA, b = iB;
+    if (a > b) { const t = a; a = b; b = t; }
+    if (b - a <= 1) return false;
+    const start = a + 1;
+    const delCount = b - a - 1;
+    points.splice(start, delCount);
+    splitEnds = [a, b];
+    remapSplitEndsForSplice(start, delCount, 0);
+    selectOnly(a);
+    return true;
+  }
+
+  function joinSection(iA, iB) {
+    const ok = addBranchSection(iA, iB, 'join');
+    if (ok) selectOnly(iB);
+    return ok;
   }
 
   function insertRoundaboutAt(startIdx, center, radius, exitAngle, dir) {
@@ -1356,7 +2489,9 @@
       pts.push(mkCtrlPoint(center.x + Math.cos(a) * radius, S.y, center.z + Math.sin(a) * radius, 0));
     }
     points.splice(startIdx + 1, 0, ...pts);
-    selected = startIdx + pts.length;
+    remapSplitEndsForSplice(startIdx + 1, 0, pts.length);
+    splitEnds = [];
+    selectOnly(startIdx + pts.length);
   }
 
   // ---------- UI / controls ----------
@@ -1365,17 +2500,22 @@
     $('toolDraw').classList.toggle('active', t === 'draw');
     $('toolMove').classList.toggle('active', t === 'move');
     $('toolErase').classList.toggle('active', t === 'erase');
+    $('toolJoin').classList.toggle('active', t === 'join');
     $('toolYSplit').classList.toggle('active', t === 'ysplit');
     $('toolRound').classList.toggle('active', t === 'roundabout');
     $('toolFencePlace').classList.toggle('active', t === 'fenceplace');
     $('toolTreePlace').classList.toggle('active', t === 'treeplace');
-    ySplitTool = { phase: 0, startIdx: -1 };
+    joinTool = { phase: 0, startIdx: -1 };
+    ySplitTool = { phase: 0, startIdx: -1, action: 'split' };
     roundTool = { phase: 0, startIdx: -1, center: null, radius: 0, dir: 1, isSizing: false, previewExit: null };
+    dragBranch = null;
+    dragBranchGroupOffsets = null;
     if (t !== 'fenceplace') fencePlaceStart = null;
   }
   $('toolDraw').onclick = () => setTool('draw');
   $('toolMove').onclick = () => setTool('move');
   $('toolErase').onclick = () => setTool('erase');
+  $('toolJoin').onclick = () => setTool('join');
   $('toolYSplit').onclick = () => setTool('ysplit');
   $('toolRound').onclick = () => setTool('roundabout');
   $('toolFencePlace').onclick = () => setTool('fenceplace');
@@ -1488,6 +2628,15 @@
   });
 
   function setSelectedNode(type) {
+    if (selectedBranch) {
+      const ref = branchMidRef(selectedBranch);
+      if (!ref) return;
+      pushUndo();
+      ref.mid.node = type;
+      $('selNode').value = type;
+      cached = null;
+      return;
+    }
     if (selected < 0) return;
     pushUndo();
     points[selected].node = type;
@@ -1496,8 +2645,36 @@
   }
 
   function syncSelectedUI() {
-    $('selLabel').textContent = selected >= 0 ? String(selected) : 'none';
-    if (selected < 0) {
+    sanitizeBranchSelection();
+    const selCount = selectedSet.size + selectedBranchSet.size;
+    if (selectedBranch) $('selLabel').textContent = `b${selectedBranch.sec}.${selectedBranch.mid}`;
+    else $('selLabel').textContent = selected >= 0 ? String(selected) : 'none';
+    $('selCount').textContent = `(${selCount})`;
+    if (selectedBranch) {
+      const ref = branchMidRef(selectedBranch);
+      const m = ref?.mid;
+      if (!m) {
+        $('selNode').value = 'smooth';
+        $('selY').value = '0'; $('selBank').value = '0';
+        $('selYVal').textContent = '0.0'; $('selBankVal').textContent = '0.0';
+        return;
+      }
+      $('selBankLabel').textContent = 'Bevel';
+      $('selBank').min = '0';
+      $('selBank').max = '1';
+      $('selBank').step = '0.01';
+      $('selNode').value = m.node || 'smooth';
+      $('selY').value = String(m.y);
+      $('selBank').value = String(clamp(Number(m.bevel ?? 0.55), 0, 1));
+      $('selYVal').textContent = Number(m.y || 0).toFixed(1);
+      $('selBankVal').textContent = clamp(Number(m.bevel ?? 0.55), 0, 1).toFixed(2);
+      return;
+    }
+    if (selected < 0 || !points[selected]) {
+      $('selBankLabel').textContent = 'Bank (deg)';
+      $('selBank').min = '-45';
+      $('selBank').max = '45';
+      $('selBank').step = '0.5';
       $('selNode').value = 'smooth';
       $('selY').value = '0'; $('selBank').value = '0';
       $('selYVal').textContent = '0.0'; $('selBankVal').textContent = '0.0';
@@ -1505,6 +2682,10 @@
     }
     ensurePointShape(points[selected]);
     const p = points[selected];
+    $('selBankLabel').textContent = 'Bank (deg)';
+    $('selBank').min = '-45';
+    $('selBank').max = '45';
+    $('selBank').step = '0.5';
     $('selNode').value = p.node;
     $('selY').value = String(p.pos.y);
     $('selBank').value = String(p.bank);
@@ -1513,18 +2694,48 @@
   }
 
   $('selNode').addEventListener('change', () => {
-    if (selected < 0) return;
+    if (selected < 0 && !selectedBranch) return;
     setSelectedNode($('selNode').value);
   });
 
   $('selY').addEventListener('input', () => {
-    if (selected < 0) return;
+    if (selectedBranchSet.size || selectedBranch) {
+      let ref = branchMidRef(selectedBranch);
+      if (!ref) {
+        const first = collectActiveBranchSelection()[0];
+        const m = first ? branchSections[first.sec]?.mids?.[first.mid] : null;
+        if (m) ref = { sec: branchSections[first.sec], mid: m };
+      }
+      if (!ref || !ref.mid) return;
+      pushUndo();
+      const nextY = Number($('selY').value);
+      const delta = nextY - Number(ref.mid.y || 0);
+      applyHeightDeltaToBranchSelection(delta);
+      syncSelectedUI();
+      cached = null;
+      return;
+    }
+    if (selected < 0 && !selectedSet.size) return;
     pushUndo();
-    points[selected].pos.y = Number($('selY').value);
-    $('selYVal').textContent = points[selected].pos.y.toFixed(1);
+    const refIdx = selected >= 0 && selectedSet.has(selected) ? selected : collectActiveSelection()[0];
+    const ref = points[refIdx];
+    if (!ref) return;
+    const nextY = Number($('selY').value);
+    const delta = nextY - Number(ref.pos.y || 0);
+    applyHeightDeltaToMainSelection(delta);
+    syncSelectedUI();
     cached = null;
   });
   $('selBank').addEventListener('input', () => {
+    if (selectedBranch) {
+      const ref = branchMidRef(selectedBranch);
+      if (!ref) return;
+      pushUndo();
+      ref.mid.bevel = clamp(Number($('selBank').value), 0, 1);
+      $('selBankVal').textContent = ref.mid.bevel.toFixed(2);
+      cached = null;
+      return;
+    }
     if (selected < 0) return;
     pushUndo();
     points[selected].bank = Number($('selBank').value);
@@ -1537,10 +2748,13 @@
     $('roadWidthVal').textContent = num('roadWidth').toFixed(2);
     $('roadThicknessVal').textContent = num('roadThickness').toFixed(2);
     $('subdivVal').textContent = String(num('subdiv'));
+    $('pathDetailVal').textContent = num('pathDetail').toFixed(2) + 'x';
     $('genRandomnessVal').textContent = num('genRandomness').toFixed(2);
     $('genScaleVal').textContent = num('genScale').toFixed(2) + 'x';
     $('genLengthVal').textContent = num('genLength').toFixed(2) + 'x';
     $('genCurvesVal').textContent = String(Math.round(num('genCurves')));
+    $('genPointCapVal').textContent = String(Math.round(num('genPointCap')));
+    $('genComboCountVal').textContent = String(Math.round(num('genComboCount')));
     $('genStraightsVal').textContent = num('genStraights').toFixed(2);
     $('genFlowVal').textContent = num('genFlow').toFixed(2);
     $('genRoundExitsVal').textContent = String(Math.round(num('genRoundExits')));
@@ -1548,6 +2762,7 @@
     $('terrainRoughVal').textContent = num('terrainRough').toFixed(1);
     $('terrainCliffVal').textContent = num('terrainCliff').toFixed(1);
     $('terrainClearanceVal').textContent = num('terrainClearance').toFixed(2);
+    $('terrainFollowVal').textContent = num('terrainFollow').toFixed(2);
     $('themeGrassVal').textContent = num('themeGrass').toFixed(1);
     $('themeCurbVal').textContent = num('themeCurb').toFixed(2);
     $('themeFenceVal').textContent = num('themeFence').toFixed(2);
@@ -1562,18 +2777,65 @@
       $('terrainRough').value = '1.0';
       $('terrainCliff').value = '3.6';
       $('terrainClearance').value = '0.34';
+      $('terrainFollow').value = '0.84';
     } else if (kind === 'cliffs') {
-      $('terrainRough').value = '2.8';
-      $('terrainCliff').value = '8.4';
-      $('terrainClearance').value = '0.38';
+      $('terrainRough').value = '3.3';
+      $('terrainCliff').value = '10.8';
+      $('terrainClearance').value = '0.44';
+      $('terrainFollow').value = '0.82';
     } else if (kind === 'bridge') {
-      $('terrainRough').value = '1.5';
-      $('terrainCliff').value = '5.2';
-      $('terrainClearance').value = '0.52';
+      $('terrainRough').value = '1.6';
+      $('terrainCliff').value = '6.6';
+      $('terrainClearance').value = '0.58';
+      $('terrainFollow').value = '0.90';
     }
     updateLabels();
   }
-  ['isoScale','roadWidth','roadThickness','subdiv','genRandomness','genScale','genLength','genCurves','genStraights','genFlow','genRoundExits','genCrossFreq','genModY','genModRound','genModCross','terrainOn','terrainRough','terrainCliff','terrainClearance','themeOn','themeGrass','themeCurb','themeFence','themeTrees','closed','includeSides','showGrid','autoBank','autoBankStrength','autoBankMax','autoBankScale'].forEach(id => $(id).addEventListener('input', updateLabels));
+  function applyDefaultGeneratorSetup() {
+    const defaults = {
+      workspaceMode: 'both',
+      isoScale: 5.98,
+      roadIsoSnap: true,
+      closed: true,
+      genStyle: 'random',
+      genComboCount: 2,
+      genRandomness: 0.87,
+      genScale: 3.73,
+      genLength: 2.40,
+      genCurves: 7,
+      genPointCap: 27,
+      genStraights: 0.78,
+      genFlow: 0.86,
+      genRoundExits: 3,
+      genCrossFreq: 3,
+      genModY: true,
+      genModRound: false,
+      genModCross: true,
+      roadWidth: 4.0,
+      roadThickness: 0.05,
+      subdiv: 25,
+      pathDetail: 0.51,
+      terrainOn: true,
+      terrainRough: 4.0,
+      terrainCliff: 10.0,
+      terrainClearance: 1.20,
+      terrainFollow: 0.88,
+      themeOn: true,
+      themeGrass: 0.6,
+      themeCurb: 0.10,
+      autoBank: true,
+      autoBankStrength: 0.72,
+      autoBankMax: 16,
+      autoBankScale: 1.40,
+    };
+    for (const [id, val] of Object.entries(defaults)) {
+      const el = $(id);
+      if (!el) continue;
+      if (el.type === 'checkbox') el.checked = Boolean(val);
+      else el.value = String(val);
+    }
+  }
+  ['isoScale','roadWidth','roadThickness','subdiv','pathDetail','genRandomness','genScale','genLength','genCurves','genPointCap','genComboCount','genStraights','genFlow','genRoundExits','genCrossFreq','genModY','genModRound','genModCross','terrainOn','terrainRough','terrainCliff','terrainClearance','terrainFollow','themeOn','themeGrass','themeCurb','themeFence','themeTrees','closed','includeSides','showGrid','roadIsoSnap','autoBank','autoBankStrength','autoBankMax','autoBankScale'].forEach(id => $(id).addEventListener('input', updateLabels));
   $('genStyle').addEventListener('change', () => {
     if ($('genStyle').value === 'f1long') {
       if (num('genLength') < 1.8) $('genLength').value = '1.80';
@@ -1587,6 +2849,7 @@
   $('terrainPresetClean').addEventListener('click', () => applyTerrainPreset('clean'));
   $('terrainPresetCliffs').addEventListener('click', () => applyTerrainPreset('cliffs'));
   $('terrainPresetBridge').addEventListener('click', () => applyTerrainPreset('bridge'));
+  applyDefaultGeneratorSetup();
   updateLabels();
 
   $('resetBtn').onclick = () => {
@@ -1599,11 +2862,21 @@
       { pos: v3(4, 0, 4), bank: 0, node: 'smooth', hin: { x: -1.2, z: 0 }, hout: { x: 1.2, z: 0 } },
       { pos: v3(-2, 0, 4), bank: 0, node: 'smooth', hin: { x: -1.2, z: 0 }, hout: { x: 1.2, z: 0 } },
     ];
+    smoothAllPointHandles();
     pan2 = { x: 0, y: 0 };
     selected = -1;
+    selectedBranch = null;
+    selectedBranchSet.clear();
+    selectedSet.clear();
     dragIndex = null;
+    dragBranch = null;
+    dragBranchGroupOffsets = null;
+    dragGroupOffsets = null;
     dragHandle = null;
-    ySplitTool = { phase: 0, startIdx: -1 };
+    joinTool = { phase: 0, startIdx: -1 };
+    ySplitTool = { phase: 0, startIdx: -1, action: 'split' };
+    splitEnds = [];
+    branchSections = [];
     roundTool = { phase: 0, startIdx: -1, center: null, radius: 0, dir: 1, isSizing: false, previewExit: null };
     placedTrees = [];
     placedFences = [];
@@ -1622,9 +2895,18 @@
     placedFences = [];
     fencePlaceStart = null;
     selected = -1;
+    selectedBranch = null;
+    selectedBranchSet.clear();
+    selectedSet.clear();
     dragIndex = null;
+    dragBranch = null;
+    dragBranchGroupOffsets = null;
+    dragGroupOffsets = null;
     dragHandle = null;
-    ySplitTool = { phase: 0, startIdx: -1 };
+    joinTool = { phase: 0, startIdx: -1 };
+    ySplitTool = { phase: 0, startIdx: -1, action: 'split' };
+    splitEnds = [];
+    branchSections = [];
     roundTool = { phase: 0, startIdx: -1, center: null, radius: 0, dir: 1, isSizing: false, previewExit: null };
     gizmo.active = false;
     gizmoHoverAxis = null;
@@ -1776,12 +3058,134 @@
     return ctrl;
   }
 
+
+  function relaxSelfCollisions(ctrl, opts = {}) {
+    const n = ctrl.length;
+    if (n < 8) return ctrl;
+    const minSep = Math.max(2, opts.minNeighborGap || 3);
+    const targetDist = Math.max(2.2, opts.targetDist || 7.8);
+    const passes = Math.max(1, Math.min(8, opts.passes || 4));
+    for (let pass = 0; pass < passes; pass++) {
+      for (let i = 0; i < n; i++) {
+        for (let j = i + minSep; j < n; j++) {
+          if (Math.abs(i - j) > n - minSep) continue;
+          const a = ctrl[i].pos;
+          const b = ctrl[j].pos;
+          const dx = b.x - a.x;
+          const dz = b.z - a.z;
+          const d = Math.hypot(dx, dz);
+          if (d < 1e-5 || d >= targetDist) continue;
+          const push = (targetDist - d) * 0.15;
+          const nx = dx / d;
+          const nz = dz / d;
+          a.x -= nx * push;
+          a.z -= nz * push;
+          b.x += nx * push;
+          b.z += nz * push;
+        }
+      }
+    }
+    return ctrl;
+  }
+
+  function enforceCornerStepLimit(ctrl, maxTurnDeg = 33.33, maxPoints = 220) {
+    const maxTurn = clamp(maxTurnDeg, 4, 170) * Math.PI / 180;
+    if (!Array.isArray(ctrl) || ctrl.length < 3) return ctrl;
+    let guard = 0;
+    while (guard++ < 900 && ctrl.length < maxPoints) {
+      let changed = false;
+      const n = ctrl.length;
+      for (let i = 0; i < n && ctrl.length < maxPoints; i++) {
+        const pi = (i - 1 + ctrl.length) % ctrl.length;
+        const ni = (i + 1) % ctrl.length;
+        const P = ctrl[pi].pos;
+        const C = ctrl[i].pos;
+        const N = ctrl[ni].pos;
+        const vin = v3(C.x - P.x, 0, C.z - P.z);
+        const vout = v3(N.x - C.x, 0, N.z - C.z);
+        const lin = Math.hypot(vin.x, vin.z);
+        const lout = Math.hypot(vout.x, vout.z);
+        if (lin < 0.7 || lout < 0.7) continue;
+        const turn = Math.acos(clamp((vin.x * vout.x + vin.z * vout.z) / (lin * lout), -1, 1));
+        if (turn <= maxTurn) continue;
+
+        const t = clamp((turn - maxTurn) / Math.max(1e-6, Math.PI - maxTurn), 0, 1);
+        const cut = 0.22 + 0.34 * t;
+        const cutIn = Math.min(lin * cut, lin * 0.46);
+        const cutOut = Math.min(lout * cut, lout * 0.46);
+        const inDir = v3((P.x - C.x) / lin, 0, (P.z - C.z) / lin);
+        const outDir = v3((N.x - C.x) / lout, 0, (N.z - C.z) / lout);
+        const A = v3(C.x + inDir.x * cutIn, C.y * 0.72 + P.y * 0.28, C.z + inDir.z * cutIn);
+        const B = v3(C.x + outDir.x * cutOut, C.y * 0.72 + N.y * 0.28, C.z + outDir.z * cutOut);
+
+        const ins = cloneCtrlPoint(ctrl[i]);
+        ctrl[i].pos = A;
+        ins.pos = B;
+        ctrl.splice(i + 1, 0, ins);
+        changed = true;
+        i++;
+      }
+      if (!changed) break;
+    }
+    return ctrl;
+  }
+
+  function enforceLayoutVariety(ctrl, strength = 1) {
+    const n = ctrl.length;
+    if (n < 12) return ctrl;
+    let absSum = 0;
+    const turns = [];
+    for (let i = 0; i < n; i++) {
+      const a = ctrl[(i - 1 + n) % n].pos;
+      const b = ctrl[i].pos;
+      const c = ctrl[(i + 1) % n].pos;
+      const t = Math.abs(signedTurnXZ(a, b, c));
+      turns.push(t);
+      absSum += t;
+    }
+    const mean = absSum / n;
+    if (mean < 1e-5) return ctrl;
+    let v = 0;
+    for (const t of turns) v += (t - mean) * (t - mean);
+    const stdev = Math.sqrt(v / n);
+    if (stdev / mean > 0.30) return ctrl; // already varied enough
+
+    let cx = 0, cz = 0;
+    for (const p of ctrl) { cx += p.pos.x; cz += p.pos.z; }
+    cx /= n; cz /= n;
+    const c1 = Math.random() * Math.PI * 2;
+    const c2 = c1 + Math.PI * (0.55 + Math.random() * 0.5);
+    const w1 = 0.26 + Math.random() * 0.35;
+    const w2 = 0.24 + Math.random() * 0.34;
+    const k1 = (0.10 + Math.random() * 0.18) * strength;
+    const k2 = (0.08 + Math.random() * 0.16) * strength;
+
+    for (let i = 0; i < n; i++) {
+      const p = ctrl[i].pos;
+      const t = (i / n) * Math.PI * 2;
+      const d1 = angDelta(t, c1);
+      const d2 = angDelta(t, c2);
+      const g1 = Math.exp(-(d1 * d1) / (2 * w1 * w1));
+      const g2 = Math.exp(-(d2 * d2) / (2 * w2 * w2));
+      const dx = p.x - cx;
+      const dz = p.z - cz;
+      const rr = Math.max(0.001, Math.hypot(dx, dz));
+      const nx = dx / rr, nz = dz / rr;
+      const scale = 1 + k1 * g1 - k2 * g2;
+      p.x = cx + dx * scale + nz * rr * 0.08 * (g1 - g2);
+      p.z = cz + dz * scale - nx * rr * 0.08 * (g1 - g2);
+    }
+    return ctrl;
+  }
+
   function generateOverlapPoints() {
     const out = [];
+    const stylePool = ['figure8', 'clover', 'serpentine', 'mountainSpiral', 'splitS', 'f1long'];
     const pick = txt('genStyle');
     const style = pick === 'random'
-      ? ['figure8', 'clover', 'serpentine', 'splitS', 'f1long'][Math.floor(Math.random() * 5)]
+      ? stylePool[Math.floor(Math.random() * stylePool.length)]
       : pick;
+    const comboCount = clamp(Math.round(num('genComboCount')), 1, 3);
     const modY = chk('genModY');
     const modRound = chk('genModRound');
     const modCross = chk('genModCross');
@@ -1789,92 +3193,198 @@
     const sizeMul = clamp(num('genScale'), 0.6, 3.8);
     const lenMul = clamp(num('genLength'), 0.7, 3.5);
     const bends = clamp(Math.round(num('genCurves')), 2, 16);
+    const pointCap = clamp(Math.round(num('genPointCap')), 16, 120);
     const straightBias = clamp(num('genStraights'), 0, 1);
     const flow = clamp(num('genFlow'), 0, 1);
     const roundExits = clamp(Math.round(num('genRoundExits')), 2, 4);
     const crossFreq = clamp(Math.round(num('genCrossFreq')), 1, 4);
-    const baseN = Math.max(20, (bends * 5) + 8 + Math.floor(6 * r));
+    const comboStyles = (() => {
+      const out = [style];
+      if (comboCount <= 1) return out;
+      const pool = stylePool.filter((s) => s !== style);
+      while (out.length < comboCount && pool.length) {
+        const k = Math.floor(Math.random() * pool.length);
+        out.push(pool.splice(k, 1)[0]);
+      }
+      return out;
+    })();
+    const baseN = Math.max(14, (bends * 3.2) + 6 + Math.floor(4 * r));
     let n = Math.round(baseN * (0.86 + 0.64 * lenMul));
-    if (style === 'f1long') {
+    const hasF1 = comboStyles.includes('f1long');
+    if (hasF1) {
       n = Math.max(n, Math.round((34 + bends * 7 + Math.floor(10 * r)) * (1.0 + 0.45 * lenMul)));
     }
+    n = clamp(n, 20, pointCap);
     let radius = (10 + r * 7 + Math.random() * (1.8 * r)) * sizeMul * (0.88 + 0.50 * lenMul);
-    if (style === 'f1long') radius *= (1.25 + 0.55 * straightBias);
-    const twist = (Math.random() * 2 - 1) * (0.05 + 0.35 * r) * (style === 'f1long' ? 0.55 : 1);
+    if (hasF1) radius *= (1.25 + 0.55 * straightBias);
+    const twist = (Math.random() * 2 - 1) * (0.05 + 0.35 * r) * (hasF1 ? 0.55 : 1);
     const rot = Math.random() * Math.PI * 2;
     const c = Math.cos(rot), s = Math.sin(rot);
-    const yAmp = (style === 'f1long' ? (0.02 + Math.random() * 0.26) : (0.05 + Math.random() * 0.75)) * r * (0.85 + 0.35 * lenMul);
+    const yAmp = (hasF1 ? (0.02 + Math.random() * 0.26) : (0.05 + Math.random() * 0.75)) * r * (0.85 + 0.35 * lenMul);
     const yFreq = 1 + Math.floor(Math.random() * 2);
-    const bankAmp = style === 'f1long' ? (2.4 + 6.2 * r) : (4 + 10 * r);
+    const bankAmp = hasF1 ? (2.4 + 6.2 * r) : (4 + 10 * r);
+    const f1Variant = Math.floor(Math.random() * 4); // 0 superellipse, 1 dogbone, 2 tri-lobe, 3 chicane
+    const asymSkewX = (Math.random() * 2 - 1) * (0.06 + 0.18 * r);
+    const asymSkewZ = (Math.random() * 2 - 1) * (0.05 + 0.16 * r);
+    const asymWarpA = (Math.random() * 2 - 1) * (0.05 + 0.11 * r);
+    const asymWarpB = (Math.random() * 2 - 1) * (0.04 + 0.10 * r);
+    const featureCount = hasF1 ? 2 + Math.floor(Math.random() * 2) : 1 + (Math.random() < 0.35 ? 1 : 0);
+    const features = [];
+    for (let fi = 0; fi < featureCount; fi++) {
+      features.push({
+        c: Math.random() * Math.PI * 2,
+        w: 0.28 + Math.random() * 0.46,
+        amp: (0.08 + Math.random() * 0.16) * (hasF1 ? (0.6 + 0.55 * (1 - flow)) : 0.42),
+      });
+    }
 
-    for (let i = 0; i < n; i++) {
-      const t = (i / n) * Math.PI * 2;
+    const comboPhases = comboStyles.map((_, i) => ((i / comboStyles.length) * Math.PI * 2) + (Math.random() * 2 - 1) * 0.55);
+    const comboOffsets = comboStyles.map((_, i) => {
+      if (comboStyles.length <= 1) return { x: 0, z: 0 };
+      const a = (i / comboStyles.length) * Math.PI * 2 + (Math.random() * 2 - 1) * 0.35;
+      const m = 0.12 + 0.07 * Math.random();
+      return { x: Math.cos(a) * m, z: Math.sin(a) * m };
+    });
+
+    function stylePoint(st, t) {
       let x, z;
-      if (style === 'figure8') {
-        // Figure-8 base with center overlap.
+      if (st === 'figure8') {
         x = Math.sin(t) * radius;
         z = Math.sin(2 * t) * radius * 0.66;
-      } else if (style === 'clover') {
+      } else if (st === 'clover') {
         const rr = radius * (1 + 0.11 * Math.cos((2 + Math.floor(bends * 0.5)) * t));
         x = Math.cos(t) * rr;
         z = Math.sin(t) * rr * 0.92;
-      } else if (style === 'serpentine') {
+      } else if (st === 'serpentine') {
         const k = clamp(2 + Math.floor(bends * 0.5), 2, 6);
-        x = Math.sin(t) * radius * 1.04;
-        z = (Math.sin(k * t) * 0.25 + Math.sin((k - 1) * t + 0.35) * 0.12) * radius * (0.88 + 0.12 * r);
-      } else if (style === 'splitS') {
+        x = Math.sin(t) * radius * (1.15 + 0.10 * (1 - flow));
+        z = (Math.sin(k * t) * 0.34 + Math.sin((k - 1) * t + 0.35) * 0.18) * radius * (0.98 + 0.16 * r);
+      } else if (st === 'mountainSpiral') {
+        const theta = t + 0.92 * Math.sin(t + 0.20) + 0.34 * Math.sin(2 * t - 0.35);
+        const rBase = radius * (0.68 + 0.22 * Math.cos(t - 0.45) + 0.15 * Math.cos(2 * t + 0.95) + 0.10 * Math.sin(3 * t - 0.60));
+        x = Math.cos(theta) * rBase * (1.08 + 0.10 * (1 - flow));
+        z = Math.sin(theta) * rBase * 0.96;
+        x += Math.sin(4 * t + 0.65) * radius * (0.09 + 0.08 * r);
+        z += Math.sin(6 * t - 0.40) * radius * (0.06 + 0.07 * r);
+      } else if (st === 'splitS') {
         x = Math.sin(t) * radius * 0.98;
         z = (Math.sin(2 * t) * 0.42 + Math.sin((2 + Math.floor(bends / 3)) * t) * 0.13) * radius;
-      } else if (style === 'f1long') {
-        // Superellipse profile: long straights + broad GP-style corners.
-        const p = 2.0 + straightBias * 3.6;
-        const ex = 2 / p;
-        const ct = Math.cos(t), st = Math.sin(t);
-        const sx = Math.sign(ct) * Math.pow(Math.abs(ct), ex);
-        const sz = Math.sign(st) * Math.pow(Math.abs(st), ex);
-        const longAxis = 1.42 + 0.95 * straightBias + 0.30 * (lenMul - 1);
-        const shortAxis = 0.62 + 0.22 * (1 - straightBias) + 0.12 * r;
-        x = sx * radius * longAxis;
-        z = sz * radius * shortAxis;
-        const hk = 2 + Math.floor(bends * 0.42);
-        const vk = 3 + Math.floor(bends * 0.52);
-        x += Math.sin(hk * t + twist * 0.6) * radius * (0.03 + 0.05 * r * (1 - straightBias));
-        z += Math.sin(vk * t - twist * 0.4) * radius * (0.05 + 0.08 * r);
+      } else if (st === 'f1long') {
+        const ct = Math.cos(t), stt = Math.sin(t);
+        const longAxis = 1.30 + 1.00 * straightBias + 0.30 * (lenMul - 1);
+        const shortAxis = 0.56 + 0.28 * (1 - straightBias) + 0.16 * r;
+        if (f1Variant === 0) {
+          const p = 1.9 + straightBias * 3.0 + 0.6 * r;
+          const ex = 2 / p;
+          const sx = Math.sign(ct) * Math.pow(Math.abs(ct), ex);
+          const sz = Math.sign(stt) * Math.pow(Math.abs(stt), ex);
+          x = sx * radius * longAxis;
+          z = sz * radius * shortAxis;
+        } else if (f1Variant === 1) {
+          const pinch = 0.70 + 0.22 * Math.cos(2 * t + 0.35);
+          const bulge = 1 + 0.22 * Math.cos(t - 0.45) * Math.cos(t - 0.45);
+          x = ct * radius * longAxis * bulge;
+          z = stt * radius * shortAxis * pinch;
+        } else if (f1Variant === 2) {
+          const l1 = 1 + 0.24 * Math.sin(3 * t + 0.4) + 0.10 * Math.sin(2 * t - 0.25);
+          x = ct * radius * longAxis * (0.92 + 0.22 * Math.max(0, Math.cos(t - 0.2)));
+          z = stt * radius * shortAxis * l1;
+        } else {
+          const p = 2.2 + straightBias * 2.4;
+          const ex = 2 / p;
+          const sx = Math.sign(ct) * Math.pow(Math.abs(ct), ex);
+          const sz = Math.sign(stt) * Math.pow(Math.abs(stt), ex);
+          x = sx * radius * longAxis;
+          z = sz * radius * shortAxis;
+          x += Math.sin(3 * t + 0.9) * radius * (0.10 + 0.12 * r);
+          z += Math.sin(5 * t - 0.3) * radius * (0.06 + 0.10 * r);
+        }
+        const hk = 2 + Math.floor(bends * 0.38);
+        const vk = 3 + Math.floor(bends * 0.50);
+        x += Math.sin(hk * t + twist * 0.6) * radius * (0.04 + 0.07 * r * (1 - straightBias));
+        z += Math.sin(vk * t - twist * 0.4) * radius * (0.06 + 0.10 * r);
+        x += radius * (asymWarpA * Math.sin(t + 0.35) + asymWarpB * Math.sin(2 * t - 0.65));
+        z += radius * (asymWarpB * Math.sin(t - 0.9) - asymWarpA * 0.65 * Math.cos(2 * t + 0.22));
+        let localScale = 1;
+        for (const f of features) {
+          const d = angDelta(t, f.c);
+          localScale += f.amp * Math.exp(-(d * d) / (2 * f.w * f.w));
+        }
+        x *= localScale;
+        z *= localScale;
       } else {
         x = Math.sin(t) * radius;
         z = Math.sin((2 + Math.floor(bends / 3)) * t) * radius * 0.58;
+      }
+      return { x, z };
+    }
+
+    for (let i = 0; i < n; i++) {
+      const t = (i / n) * Math.PI * 2;
+      let x = 0, z = 0;
+      if (comboStyles.length <= 1) {
+        const p = stylePoint(style, t);
+        x = p.x; z = p.z;
+      } else {
+        const sigma = (Math.PI / comboStyles.length) * 0.72;
+        let wsum = 0;
+        for (let ci = 0; ci < comboStyles.length; ci++) {
+          const center = (ci / comboStyles.length) * Math.PI * 2;
+          const d = angDelta(t, center);
+          const w = Math.exp(-(d * d) / (2 * sigma * sigma));
+          const p = stylePoint(comboStyles[ci], t + comboPhases[ci]);
+          x += w * (p.x + comboOffsets[ci].x * radius);
+          z += w * (p.z + comboOffsets[ci].z * radius);
+          wsum += w;
+        }
+        if (wsum > 1e-6) {
+          x /= wsum;
+          z /= wsum;
+        }
       }
       if (modY) {
         z += Math.max(0, Math.sin(t)) * radius * (0.1 + 0.13 * r);
       }
       if (modRound) {
-        const rr = radius * (0.52 + 0.08 * Math.cos(roundExits * t));
+        // Always bias wider roundabout geometry.
+        const rr = radius * (0.66 + 0.12 * Math.cos(roundExits * t));
         const ringX = Math.cos(t) * rr;
         const ringZ = Math.sin(t) * rr;
         const arm = Math.max(0, Math.cos(roundExits * t));
-        const ax = ringX + Math.cos(t) * arm * radius * (0.30 + 0.10 * r);
-        const az = ringZ + Math.sin(t) * arm * radius * (0.20 + 0.08 * r);
-        const blend = 0.28 + 0.22 * r;
+        const ax = ringX + Math.cos(t) * arm * radius * (0.44 + 0.14 * r);
+        const az = ringZ + Math.sin(t) * arm * radius * (0.32 + 0.12 * r);
+        const blend = 0.36 + 0.24 * r;
         x = x * (1 - blend) + ax * blend;
         z = z * (1 - blend) + az * blend;
       }
       if (modCross) {
-        const crossScale = style === 'f1long' ? 0.45 : 1.0;
+        const crossScale = (style === 'f1long' && comboStyles.length <= 1) ? 0.45 : 1.0;
         z += Math.sin(crossFreq * 2 * t + 0.5) * radius * (0.06 + 0.08 * r) * crossScale;
       }
       // Controlled wobble while keeping the layout drivable.
-      const wob = style === 'figure8' ? 1.0 : (style === 'f1long' ? 0.08 : 0.24);
+      const wob = comboStyles.length > 1 ? 0.19 : (style === 'figure8' ? 1.0 : (style === 'f1long' ? 0.08 : 0.24));
       x += Math.sin(t * 3 + twist) * (radius * (0.01 + 0.08 * r) * wob);
       z += Math.cos(t * 4 - twist) * (radius * (0.01 + 0.07 * r) * wob);
 
       // Rotate final shape.
-      const rx = x * c - z * s;
-      const rz = x * s + z * c;
+      let rx = x * c - z * s;
+      let rz = x * s + z * c;
+      if (style === 'f1long' || comboStyles.includes('f1long')) {
+        const sxw = rx + rz * asymSkewX;
+        const szw = rz + rx * asymSkewZ;
+        rx = sxw;
+        rz = szw;
+      }
 
       let y = Math.sin(t * yFreq + twist * 2) * yAmp + bridgeProfile(style, t, r, modY, modCross);
       if (style === 'serpentine') {
         // Keep one side consistently higher than the other.
         y += Math.sin(t) * (0.95 + 2.2 * r);
+      } else if (style === 'mountainSpiral') {
+        // Spiral-like climb/descent around center mountain.
+        y += Math.sin(t * 1.55 - 0.3) * (1.2 + 2.0 * r) + Math.cos(t * 0.5 + 0.15) * (0.55 + 0.95 * r);
+      } else if (comboStyles.includes('mountainSpiral')) {
+        y += Math.sin(t * 1.28 - 0.18) * (0.65 + 1.25 * r);
       }
       const bank = Math.sin(t * 2 + twist) * bankAmp;
       out.push({
@@ -1885,13 +3395,37 @@
         hout: { x: 0, z: 0 },
       });
     }
-    if (style === 'f1long') {
-      smoothGeneratedLayout(out, 6 + Math.round(flow * 2), 0.46 + 0.20 * flow, 0.18 + 0.10 * flow);
+    if (comboStyles.length > 1) {
+      smoothGeneratedLayout(out, 2 + Math.round(flow * 2), 0.20 + 0.14 * flow, 0.16 + 0.08 * flow);
+    } else if (style === 'f1long') {
+      const varKeep = 1 - flow * 0.45;
+      smoothGeneratedLayout(out, 3 + Math.round(flow * 2), 0.24 + 0.16 * flow * varKeep, 0.15 + 0.08 * flow);
+    } else if (style === 'mountainSpiral') {
+      smoothGeneratedLayout(out, 2 + Math.round(flow * 1.5), 0.22 + 0.14 * flow, 0.18 + 0.10 * flow);
     } else if (style !== 'figure8') {
       smoothGeneratedLayout(out, 3 + Math.round(flow * 2), 0.36 + 0.18 * flow + 0.06 * r, 0.20 + 0.08 * flow);
     } else {
       smoothGeneratedLayout(out, 1 + Math.round(flow), 0.16 + 0.12 * flow, 0.08 + 0.04 * flow);
     }
+    const roadW = Math.max(1, num('roadWidth'));
+    const overlapTarget = style === 'figure8'
+      ? (roadW * (1.65 + 0.55 * (1 - flow)))
+      : (style === 'serpentine'
+        ? (roadW * (2.95 + 0.95 * (1 - flow)))
+        : (style === 'mountainSpiral'
+          ? (roadW * (2.75 + 0.90 * (1 - flow)))
+          : (roadW * (2.1 + 0.7 * (1 - flow)))));
+    const megaTarget = comboStyles.length > 1 ? overlapTarget * (1.14 + 0.08 * comboStyles.length) : overlapTarget;
+    relaxSelfCollisions(out, {
+      targetDist: megaTarget,
+      minNeighborGap: comboStyles.length > 1 ? 4 : (style === 'f1long' ? 4 : ((style === 'serpentine' || style === 'mountainSpiral') ? 4 : 3)),
+      passes: comboStyles.length > 1 ? 7 : (style === 'f1long' ? 5 : (style === 'serpentine' ? 6 : (style === 'mountainSpiral' ? 6 : 4))),
+    });
+    enforceCornerStepLimit(out, 33.33, pointCap + 36);
+    if (style === 'f1long') {
+      enforceLayoutVariety(out, 0.9 + 0.8 * (1 - flow));
+    }
+    smoothGeneratedLayout(out, 1 + Math.round(flow), 0.08, 0.03);
     applyTrackRules(out);
     const baseBankIntensity = style === 'f1long' ? (0.42 + 0.34 * r) : (0.65 + 0.55 * r);
     const bankFlowScale = 1 - flow * 0.2;
@@ -1903,13 +3437,30 @@
   $('genBtn').onclick = () => {
     pushUndo();
     points = generateOverlapPoints();
+    if (chk('roadIsoSnap')) {
+      const g = Math.max(0.01, num('grid'));
+      for (const p of points) {
+        const sp = snapXZ(p.pos.x, p.pos.z, g);
+        p.pos.x = sp.x;
+        p.pos.z = sp.z;
+      }
+      smoothAllPointHandles();
+    }
+    splitEnds = [];
+    branchSections = [];
     placedTrees = [];
     placedFences = [];
     fencePlaceStart = null;
     $('closed').checked = true;
-    if (num('subdiv') < 12) $('subdiv').value = '12';
+    if (num('subdiv') < 8) $('subdiv').value = '8';
     selected = -1;
+    selectedBranch = null;
+    selectedBranchSet.clear();
+    selectedSet.clear();
     dragIndex = null;
+    dragBranch = null;
+    dragBranchGroupOffsets = null;
+    dragGroupOffsets = null;
     dragHandle = null;
     gizmo.active = false;
     gizmoHoverAxis = null;
@@ -1938,29 +3489,47 @@
   }
 
   $('exportBtn').onclick = () => {
-    const samples = sampleSpline(points, num('subdiv'), chk('closed'), autoBankCfg());
-    if (samples.length < 2) return;
-    const { roadTop, roadSides, frames } = buildRoadMesh(samples, {
+    const net = sampleRoadNetwork();
+    if (net.main.length < 2) return;
+    const mainRoad = buildRoadMesh(net.main, {
       width: num('roadWidth'),
       thickness: num('roadThickness'),
       includeSides: chk('includeSides'),
       uvScale: 6,
+      capEnds: !chk('closed'),
     });
+    const roadTop = cloneMesh(mainRoad.roadTop, 'road_top');
+    const roadSides = mainRoad.roadSides ? cloneMesh(mainRoad.roadSides, 'road_sides') : null;
+    for (const bs of net.branches) {
+      const extra = buildRoadMesh(bs, {
+        width: num('roadWidth'),
+        thickness: num('roadThickness'),
+        includeSides: chk('includeSides'),
+        uvScale: 6,
+        capEnds: true,
+      });
+      mergeMeshInto(roadTop, extra.roadTop);
+      if (roadSides && extra.roadSides) mergeMeshInto(roadSides, extra.roadSides);
+    }
+    addJunctionPads(roadTop, num('roadWidth'));
     const terrain = chk('terrainOn')
-      ? buildTerrainMesh(samples, {
+      ? buildTerrainMesh(net.all, {
         roadWidth: num('roadWidth'),
         roadThickness: num('roadThickness'),
         shoulderWidth: chk('themeOn') ? num('themeGrass') : 1.8,
         roadClearance: num('terrainClearance'),
+        followRoad: num('terrainFollow'),
         roughness: num('terrainRough'),
         cliffHeight: num('terrainCliff'),
       })
       : null;
-    const theme = buildThemeMeshes(samples, frames, {
+    const theme = buildThemeMeshes(net.main, mainRoad.frames, {
       enabled: chk('themeOn'),
       roadWidth: num('roadWidth'),
+      roadThickness: num('roadThickness'),
       shoulderWidth: num('themeGrass'),
       curbHeight: num('themeCurb'),
+      closed: chk('closed'),
     });
     const placed = buildPlacedPropMeshes({
       enabled: chk('themeOn'),
@@ -1983,9 +3552,21 @@
   };
 
   // ---------- pro handle rules ----------
-  function setHandle(i, which, hx, hz, opts = { rotateOnly: false, breakMirror: false }) {
-    const p = points[i];
-    ensurePointShape(p);
+  function setHandle(target, which, hx, hz, opts = { rotateOnly: false, breakMirror: false }) {
+    let p = null;
+    if (target?.kind === 'branch') {
+      const sec = branchSections[target.sec];
+      p = sec?.mids?.[target.mid] || null;
+      if (p) {
+        if (!p.hin) p.hin = { x: 0, z: 0 };
+        if (!p.hout) p.hout = { x: 0, z: 0 };
+        if (!p.node) p.node = 'smooth';
+      }
+    } else {
+      p = points[target?.i];
+      if (p) ensurePointShape(p);
+    }
+    if (!p) return;
     const node = p.node || 'smooth';
 
     // rotateOnly: preserve original length
@@ -2026,29 +3607,47 @@
   // ---------- 3D preview (software renderer) ----------
   function getMesh() {
     if (cached) return cached;
-    const samples = sampleSpline(points, num('subdiv'), chk('closed'), autoBankCfg());
-    if (samples.length < 2) { cached = null; return null; }
-    const { roadTop, roadSides, frames } = buildRoadMesh(samples, {
+    const net = sampleRoadNetwork();
+    if (net.main.length < 2) { cached = null; return null; }
+    const mainRoad = buildRoadMesh(net.main, {
       width: num('roadWidth'),
       thickness: num('roadThickness'),
       includeSides: chk('includeSides'),
       uvScale: 6,
+      capEnds: !chk('closed'),
     });
+    const roadTop = cloneMesh(mainRoad.roadTop, 'road_top');
+    const roadSides = mainRoad.roadSides ? cloneMesh(mainRoad.roadSides, 'road_sides') : null;
+    for (const bs of net.branches) {
+      const extra = buildRoadMesh(bs, {
+        width: num('roadWidth'),
+        thickness: num('roadThickness'),
+        includeSides: chk('includeSides'),
+        uvScale: 6,
+        capEnds: true,
+      });
+      mergeMeshInto(roadTop, extra.roadTop);
+      if (roadSides && extra.roadSides) mergeMeshInto(roadSides, extra.roadSides);
+    }
+    addJunctionPads(roadTop, num('roadWidth'));
     const terrain = chk('terrainOn')
-      ? buildTerrainMesh(samples, {
+      ? buildTerrainMesh(net.all, {
         roadWidth: num('roadWidth'),
         roadThickness: num('roadThickness'),
         shoulderWidth: chk('themeOn') ? num('themeGrass') : 1.8,
         roadClearance: num('terrainClearance'),
+        followRoad: num('terrainFollow'),
         roughness: num('terrainRough'),
         cliffHeight: num('terrainCliff'),
       })
       : null;
-    const theme = buildThemeMeshes(samples, frames, {
+    const theme = buildThemeMeshes(net.main, mainRoad.frames, {
       enabled: chk('themeOn'),
       roadWidth: num('roadWidth'),
+      roadThickness: num('roadThickness'),
       shoulderWidth: num('themeGrass'),
       curbHeight: num('themeCurb'),
+      closed: chk('closed'),
     });
     const placed = buildPlacedPropMeshes({
       enabled: chk('themeOn'),
@@ -2086,7 +3685,7 @@
       mx.x = Math.max(mx.x, p.x); mx.y = Math.max(mx.y, p.y); mx.z = Math.max(mx.z, p.z);
     }
 
-    cached = { samples, roadTop, roadSides, terrain, theme, placed, tris, bbox: { min: mn, max: mx } };
+    cached = { samples: net.main, branchSamples: net.branches, roadTop, roadSides, terrain, theme, placed, tris, bbox: { min: mn, max: mx } };
     return cached;
   }
 
@@ -2155,10 +3754,34 @@
     const m = getMesh();
     if (!m || !m.bbox) return;
     const b = m.bbox;
-    const tgt = selected >= 0 && points[selected] ? points[selected].pos : mul(add(b.min, b.max), 0.5);
-    const ext = sub(b.max, b.min);
-    const r = Math.max(ext.x, ext.y, ext.z) * 0.9 + 1e-6;
-    const eye = add(tgt, v3(r * 1.65, r * 0.92, -r * 1.65));
+    let tgt = null;
+    let r = 0;
+
+    if (selected >= 0 && points[selected]) {
+      tgt = points[selected].pos;
+      const closed = chk('closed');
+      const n = points.length;
+      const pi = closed ? (selected - 1 + n) % n : Math.max(0, selected - 1);
+      const ni = closed ? (selected + 1) % n : Math.min(n - 1, selected + 1);
+      const prev = points[pi]?.pos || tgt;
+      const next = points[ni]?.pos || tgt;
+      const avgSeg = (Math.hypot(tgt.x - prev.x, tgt.z - prev.z) + Math.hypot(next.x - tgt.x, next.z - tgt.z)) * 0.5;
+      r = clamp(Math.max(num('roadWidth') * 1.35, avgSeg * 1.9), 2.8, 16);
+    } else if (selectedBranch) {
+      const ref = branchMidRef(selectedBranch);
+      if (ref?.mid) {
+        tgt = v3(ref.mid.x, ref.mid.y, ref.mid.z);
+        r = clamp(num('roadWidth') * 1.6, 2.8, 16);
+      }
+    }
+
+    if (!tgt) {
+      tgt = mul(add(b.min, b.max), 0.5);
+      const ext = sub(b.max, b.min);
+      r = Math.max(ext.x, ext.y, ext.z) * 0.9 + 1e-6;
+    }
+
+    const eye = add(tgt, v3(r * 1.22, r * 0.72, -r * 1.22));
     setCameraLookAt(eye, tgt);
     if (!Number.isFinite(camMoveSpeed)) camMoveSpeed = CAM_SPEED_DEFAULT;
   }
@@ -2177,6 +3800,8 @@
   function hitGizmoAxis(gs, sx, sy) {
     if (!gs) return null;
     const hitRad = 10;
+    const centerHit = Math.hypot(sx - gs.center.sx, sy - gs.center.sy);
+    if (centerHit <= 8) return 'free';
     const c = gs.center;
     const axes = [
       { axis: 'x', p: gs.px },
@@ -2337,19 +3962,21 @@
       }
     }
 
-    vctx.save();
-    vctx.globalAlpha = viewMode === 'wireframe' ? 0.96 : 0.35;
-    vctx.strokeStyle = viewMode === 'wireframe' ? '#e5eeff' : '#b7c5ff';
-    vctx.lineWidth = viewMode === 'wireframe' ? 1.35 : 1;
-    for (const t of projected) {
-      vctx.beginPath();
-      vctx.moveTo(t.pa.sx, t.pa.sy);
-      vctx.lineTo(t.pb.sx, t.pb.sy);
-      vctx.lineTo(t.pc.sx, t.pc.sy);
-      vctx.closePath();
-      vctx.stroke();
+    if (viewMode !== 'normal') {
+      vctx.save();
+      vctx.globalAlpha = viewMode === 'wireframe' ? 0.96 : 0.35;
+      vctx.strokeStyle = viewMode === 'wireframe' ? '#e5eeff' : '#b7c5ff';
+      vctx.lineWidth = viewMode === 'wireframe' ? 1.35 : 1;
+      for (const t of projected) {
+        vctx.beginPath();
+        vctx.moveTo(t.pa.sx, t.pa.sy);
+        vctx.lineTo(t.pb.sx, t.pb.sy);
+        vctx.lineTo(t.pc.sx, t.pc.sy);
+        vctx.closePath();
+        vctx.stroke();
+      }
+      vctx.restore();
     }
-    vctx.restore();
 
     // centerline
     vctx.save();
@@ -2552,8 +4179,8 @@
 
     const pTerrain = castKinds(new Set(['terrain']));
     if (pTerrain) return pTerrain;
-    const pGround = castKinds(new Set(['grass', 'curb', 'top']));
-    if (pGround) return pGround;
+    const pGrass = castKinds(new Set(['grass']));
+    if (pGrass) return pGrass;
 
     if (Math.abs(ray.d.y) > 1e-6) {
       const t = (0 - ray.o.y) / ray.d.y;
@@ -2596,6 +4223,16 @@
         const g = Math.max(0.01, num('grid'));
         p.z = Math.round(z / g) * g;
         gizmoGhost = { axis: 'z', pos: v3(p.x, p.y, p.z) };
+      } else if (gizmo.axis === 'free') {
+        const mdx = sx - gizmo.startMouse.x;
+        const mdy = sy - gizmo.startMouse.y;
+        const pp = worldPerPixel(Math.max(0.2, gizmo.depth), h);
+        const drag = add(mul(basis.r, mdx * pp), mul(basis.u, -mdy * pp));
+        const g = Math.max(0.01, num('grid'));
+        p.x = Math.round((gizmo.startPos.x + drag.x) / g) * g;
+        p.y = gizmo.startPos.y + drag.y;
+        p.z = Math.round((gizmo.startPos.z + drag.z) / g) * g;
+        gizmoGhost = { axis: 'free', pos: v3(p.x, p.y, p.z) };
       }
       syncSelectedUI();
       cached = null;
@@ -2692,7 +4329,7 @@
         gizmo.depth = gs ? gs.depth : 1;
         gizmo.startCenter = gs.center;
         gizmo.startSize = gs.size;
-        gizmo.startAxisPt = hit === 'x' ? gs.px : (hit === 'y' ? gs.py : gs.pz);
+        gizmo.startAxisPt = hit === 'x' ? gs.px : (hit === 'y' ? gs.py : (hit === 'z' ? gs.pz : gs.px));
         gizmoGhost = null;
         view.style.cursor = 'grabbing';
         return;
@@ -2741,7 +4378,7 @@
       cached = null;
     }
     if (isLookL && !lmbMoved && pickOnRelease >= 0) {
-      selected = pickOnRelease;
+      selectOnly(pickOnRelease);
       syncSelectedUI();
     }
     if (isPan3 && !mmbMoved) camMoveSpeed = CAM_SPEED_DEFAULT;
@@ -2803,18 +4440,75 @@
       ectx.restore();
     }
 
-    const samples = sampleSpline(points, num('subdiv'), chk('closed'), autoBankCfg());
-    if (samples.length > 1) {
+    const net = sampleRoadNetwork();
+    if (net.main.length > 1) {
       ectx.save();
       ectx.strokeStyle = '#ffd36e';
       ectx.lineWidth = 2;
       ectx.beginPath();
-      for (let i = 0; i < samples.length; i++) {
-        const sp = screenFromWorld2(samples[i].pos, org, s);
+      for (let i = 0; i < net.main.length; i++) {
+        const sp = screenFromWorld2(net.main[i].pos, org, s);
         if (i === 0) ectx.moveTo(sp.x, sp.y); else ectx.lineTo(sp.x, sp.y);
       }
       ectx.stroke();
       ectx.restore();
+    }
+    if (net.branches.length) {
+      ectx.save();
+      ectx.strokeStyle = '#78aaff';
+      ectx.lineWidth = 2;
+      for (const bs of net.branches) {
+        if (bs.length < 2) continue;
+        ectx.beginPath();
+        for (let i = 0; i < bs.length; i++) {
+          const sp = screenFromWorld2(bs[i].pos, org, s);
+          if (i === 0) ectx.moveTo(sp.x, sp.y); else ectx.lineTo(sp.x, sp.y);
+        }
+        ectx.stroke();
+      }
+      ectx.restore();
+    }
+    sanitizeBranchSections();
+    sanitizeBranchSelection();
+    for (let si = 0; si < branchSections.length; si++) {
+      const mids = branchSections[si]?.mids || [];
+      for (let mi = 0; mi < mids.length; mi++) {
+        const m = mids[mi];
+        const sp = screenFromWorld2(v3(m.x, m.y, m.z), org, s);
+        const key = branchSelKey(si, mi);
+        const isSel = selectedBranchSet.has(key) || (selectedBranch && selectedBranch.sec === si && selectedBranch.mid === mi);
+        ectx.beginPath();
+        ectx.arc(sp.x, sp.y, isSel ? 6.2 : 5, 0, Math.PI * 2);
+        ectx.fillStyle = isSel ? '#7ed0ff' : '#9ec2ff';
+        ectx.fill();
+        ectx.strokeStyle = '#0b0f19';
+        ectx.lineWidth = isSel ? 1.35 : 1;
+        ectx.stroke();
+      }
+    }
+
+    if (selectedBranch) {
+      const ref = branchMidRef(selectedBranch);
+      if (ref) {
+        const m = ref.mid;
+        const psp = screenFromWorld2(v3(m.x, m.y, m.z), org, s);
+        const hi = branchHandleWorld(selectedBranch, 'in');
+        const ho = branchHandleWorld(selectedBranch, 'out');
+        if (hi && ho) {
+          const hInSp = screenFromWorld2(hi, org, s);
+          const hOutSp = screenFromWorld2(ho, org, s);
+          ectx.save();
+          ectx.strokeStyle = 'rgba(163,208,255,0.9)';
+          ectx.lineWidth = 1;
+          ectx.beginPath(); ectx.moveTo(psp.x, psp.y); ectx.lineTo(hInSp.x, hInSp.y); ectx.stroke();
+          ectx.beginPath(); ectx.moveTo(psp.x, psp.y); ectx.lineTo(hOutSp.x, hOutSp.y); ectx.stroke();
+          ectx.fillStyle = '#78ffa0';
+          ectx.fillRect(hInSp.x - 4, hInSp.y - 4, 8, 8);
+          ectx.fillStyle = '#78aaff';
+          ectx.fillRect(hOutSp.x - 4, hOutSp.y - 4, 8, 8);
+          ectx.restore();
+        }
+      }
     }
 
     if (selected >= 0 && points[selected]) {
@@ -2841,13 +4535,15 @@
     for (let i = 0; i < points.length; i++) {
       const p = points[i];
       const sp = screenFromWorld2(p.pos, org, s);
+      const isPrimary = i === selected;
+      const isMulti = selectedSet.has(i);
       ectx.beginPath();
-      ectx.arc(sp.x, sp.y, i === selected ? 7 : 5, 0, Math.PI * 2);
-      ectx.fillStyle = i === selected ? '#ffd36e' : '#e9ecf6';
+      ectx.arc(sp.x, sp.y, isPrimary ? 7 : (isMulti ? 6 : 5), 0, Math.PI * 2);
+      ectx.fillStyle = isPrimary ? '#ffd36e' : (isMulti ? '#ffdba0' : '#e9ecf6');
       ectx.fill();
-      if (i === selected) {
+      if (isPrimary || isMulti) {
         ectx.strokeStyle = '#0b0f19';
-        ectx.lineWidth = 1.5;
+        ectx.lineWidth = isPrimary ? 1.5 : 1.2;
         ectx.stroke();
       }
     }
@@ -2861,6 +4557,31 @@
       ectx.setLineDash([5, 4]);
       ectx.beginPath(); ectx.arc(sp.x, sp.y, 12, 0, Math.PI * 2); ectx.stroke();
       ectx.setLineDash([]);
+      ectx.restore();
+    }
+    if (mode === 'join' && joinTool.phase === 1 && joinTool.startIdx >= 0 && points[joinTool.startIdx]) {
+      const sp = screenFromWorld2(points[joinTool.startIdx].pos, org, s);
+      ectx.save();
+      ectx.strokeStyle = '#78aaff';
+      ectx.lineWidth = 2;
+      ectx.setLineDash([5, 4]);
+      ectx.beginPath(); ectx.arc(sp.x, sp.y, 12, 0, Math.PI * 2); ectx.stroke();
+      ectx.setLineDash([]);
+      ectx.restore();
+    }
+    sanitizeSplitEnds();
+    if (splitEnds.length) {
+      ectx.save();
+      ectx.strokeStyle = '#ff6e6e';
+      ectx.lineWidth = 2;
+      for (const idx of splitEnds) {
+        const p = points[idx];
+        if (!p) continue;
+        const sp = screenFromWorld2(p.pos, org, s);
+        ectx.beginPath();
+        ectx.arc(sp.x, sp.y, 9, 0, Math.PI * 2);
+        ectx.stroke();
+      }
       ectx.restore();
     }
     if (mode === 'roundabout' && roundTool.phase >= 1 && roundTool.center && roundTool.radius > 0.5) {
@@ -2901,20 +4622,75 @@
 
     if (e.button !== 0) return;
     const hitPoint = nearestPointScreen(sx, sy, org, s, 12);
+    const hitBranchMid = nearestBranchMidpointScreen(sx, sy, org, s, 10);
 
     if (mode === 'ysplit') {
-      if (hitPoint < 0) return;
       if (ySplitTool.phase === 0) {
+        if (hitPoint < 0) {
+          const curveHit = nearestCurveHitScreen(sx, sy, org, s, 10);
+          if (!curveHit) return;
+          pushUndo();
+          const tan = norm(v3(curveHit.tan.x, 0, curveHit.tan.z));
+          const prevIdx = (curveHit.insertIndex - 1 + points.length) % points.length;
+          const nextIdx = curveHit.insertIndex % points.length;
+          const prevPos = points[prevIdx]?.pos || curveHit.pos;
+          const nextPos = points[nextIdx]?.pos || curveHit.pos;
+          const hIn = Math.max(0.05, len(sub(curveHit.pos, prevPos)) * 0.30);
+          const hOut = Math.max(0.05, len(sub(nextPos, curveHit.pos)) * 0.30);
+          const np = {
+            pos: v3(curveHit.pos.x, curveHit.pos.y, curveHit.pos.z),
+            bank: curveHit.bank,
+            node: 'smooth',
+            hin: { x: -tan.x * hIn, z: -tan.z * hIn },
+            hout: { x: tan.x * hOut, z: tan.z * hOut },
+          };
+          points.splice(curveHit.insertIndex, 0, np);
+          remapSplitEndsForSplice(curveHit.insertIndex, 0, 1);
+          const idx = curveHit.insertIndex;
+          smoothNeighborhood([idx - 1, idx, idx + 1]);
+          selectOnly(idx);
+          ySplitTool.phase = 1;
+          ySplitTool.startIdx = idx;
+          ySplitTool.action = 'split';
+          syncSelectedUI();
+          cached = null;
+          return;
+        }
         ySplitTool.phase = 1;
         ySplitTool.startIdx = hitPoint;
-        selected = hitPoint;
+        ySplitTool.action = (e.ctrlKey || e.metaKey) ? 'trim' : (e.altKey ? 'join' : 'split');
+        selectOnly(hitPoint);
         syncSelectedUI();
         return;
       }
-      if (ySplitTool.startIdx >= 0 && ySplitTool.startIdx !== hitPoint) {
+      if (ySplitTool.startIdx >= 0) {
         pushUndo();
-        insertYSplitModule(ySplitTool.startIdx, hitPoint);
-        ySplitTool = { phase: 0, startIdx: -1 };
+        if (ySplitTool.action === 'split' && ySplitTool.startIdx === hitPoint) splitPointForFork(hitPoint);
+        else if (ySplitTool.startIdx !== hitPoint) {
+          if (ySplitTool.action === 'trim') trimSection(ySplitTool.startIdx, hitPoint);
+          else if (ySplitTool.action === 'join') joinSection(ySplitTool.startIdx, hitPoint);
+          else addBranchSection(ySplitTool.startIdx, hitPoint, 'fork');
+        }
+        ySplitTool = { phase: 0, startIdx: -1, action: 'split' };
+        syncSelectedUI();
+        cached = null;
+      }
+      return;
+    }
+
+    if (mode === 'join') {
+      if (hitPoint < 0) return;
+      if (joinTool.phase === 0) {
+        joinTool.phase = 1;
+        joinTool.startIdx = hitPoint;
+        selectOnly(hitPoint);
+        syncSelectedUI();
+        return;
+      }
+      if (joinTool.startIdx >= 0 && joinTool.startIdx !== hitPoint) {
+        pushUndo();
+        joinSection(joinTool.startIdx, hitPoint);
+        joinTool = { phase: 0, startIdx: -1 };
         syncSelectedUI();
         cached = null;
       }
@@ -2927,12 +4703,12 @@
         roundTool.phase = 1;
         roundTool.startIdx = hitPoint;
         roundTool.isSizing = true;
-        selected = hitPoint;
+        selectOnly(hitPoint);
         syncSelectedUI();
         const S = points[hitPoint].pos;
         const T = tangentAtIndex(hitPoint);
         const N = norm(v3(-T.z, 0, T.x));
-        const r0 = Math.max(2, num('roadWidth') * 1.9);
+        const r0 = Math.max(3.2, num('roadWidth') * 2.45);
         roundTool.radius = r0;
         roundTool.dir = 1;
         roundTool.center = add(S, mul(N, r0));
@@ -2957,44 +4733,117 @@
     const hitHandle = nearestHandle2D(sx, sy, org, s, 10);
     if (hitHandle) {
       pushUndo();
-      dragHandle = { i: hitHandle.i, which: hitHandle.which };
+      dragHandle = hitHandle;
+      return;
+    }
+
+    if (hitBranchMid) {
+      const toggleMulti = e.shiftKey || e.ctrlKey || e.metaKey;
+      if (toggleMulti) toggleBranchSelection(hitBranchMid.sec, hitBranchMid.mid);
+      else if (!selectedBranchSet.has(branchSelKey(hitBranchMid.sec, hitBranchMid.mid)) || selectedBranchSet.size <= 1) selectBranchMidpoint(hitBranchMid.sec, hitBranchMid.mid);
+      syncSelectedUI();
+      if (mode === 'move' || mode === 'draw') {
+        pushUndo();
+        dragBranch = { sec: hitBranchMid.sec, mid: hitBranchMid.mid };
+        const ref = branchSections[hitBranchMid.sec]?.mids?.[hitBranchMid.mid];
+        const active = collectActiveBranchSelection({ sec: hitBranchMid.sec, mid: hitBranchMid.mid });
+        dragBranchGroupOffsets = ref ? active.map((a) => {
+          const m = branchSections[a.sec]?.mids?.[a.mid];
+          return m ? { sec: a.sec, mid: a.mid, dx: m.x - ref.x, dz: m.z - ref.z } : null;
+        }).filter(Boolean) : null;
+      }
       return;
     }
 
     if (mode === 'erase') {
       if (hitPoint >= 0) {
         pushUndo();
-        points = points.filter((_, i) => i !== hitPoint);
-        selected = -1;
+        points.splice(hitPoint, 1);
+        remapSplitEndsForSplice(hitPoint, 1, 0);
+        selectOnly(-1);
         syncSelectedUI();
         cached = null;
+      } else {
+        const hitBranchCurve = nearestBranchCurveHitScreen(sx, sy, org, s, 10);
+        if (hitBranchCurve) {
+          pushUndo();
+          branchSections.splice(hitBranchCurve.sec, 1);
+          sanitizeBranchSections();
+          selectedBranch = null;
+          selectedBranchSet.clear();
+          syncSelectedUI();
+          cached = null;
+        }
       }
       return;
     }
 
     if (hitPoint >= 0) {
-      selected = hitPoint;
+      const toggleMulti = e.shiftKey || e.ctrlKey || e.metaKey;
+      if (toggleMulti) {
+        toggleSelection(hitPoint);
+        syncSelectedUI();
+        return;
+      }
+      if (!selectedSet.has(hitPoint) || selectedSet.size <= 1) selectOnly(hitPoint);
       syncSelectedUI();
       if (mode === 'move' || mode === 'draw') {
         pushUndo();
         dragIndex = hitPoint;
+        const active = collectActiveSelection(hitPoint);
+        dragGroupOffsets = active.map((idx) => ({
+          idx,
+          dx: points[idx].pos.x - points[hitPoint].pos.x,
+          dz: points[idx].pos.z - points[hitPoint].pos.z,
+        }));
       }
       return;
     }
 
     if (mode === 'draw') {
       pushUndo();
-      const g = Math.max(0.01, num('grid'));
-      const wp = worldFromScreenXZWithY(sx, sy, org, s, 0);
-      const snap = snapXZ(wp.x, wp.z, g);
-      points.push({
-        pos: v3(snap.x, 0, snap.z),
-        bank: 0,
-        node: 'smooth',
-        hin: { x: -1.2, z: 0 },
-        hout: { x: 1.2, z: 0 },
-      });
-      selected = points.length - 1;
+      const curveHit = nearestCurveHitScreen(sx, sy, org, s, 10);
+      if (curveHit) {
+        const tan = norm(v3(curveHit.tan.x, 0, curveHit.tan.z));
+        const snapped = maybeSnapXZ(curveHit.pos.x, curveHit.pos.z);
+        const insPos = v3(snapped.x, curveHit.pos.y, snapped.z);
+        const prevIdx = (curveHit.insertIndex - 1 + points.length) % points.length;
+        const nextIdx = curveHit.insertIndex % points.length;
+        const prevPos = points[prevIdx]?.pos || insPos;
+        const nextPos = points[nextIdx]?.pos || insPos;
+        const hIn = Math.max(0.05, len(sub(insPos, prevPos)) * 0.30);
+        const hOut = Math.max(0.05, len(sub(nextPos, insPos)) * 0.30);
+        const np = {
+          pos: insPos,
+          bank: curveHit.bank,
+          node: 'smooth',
+          hin: { x: -tan.x * hIn, z: -tan.z * hIn },
+          hout: { x: tan.x * hOut, z: tan.z * hOut },
+        };
+        points.splice(curveHit.insertIndex, 0, np);
+        remapSplitEndsForSplice(curveHit.insertIndex, 0, 1);
+        const idx = curveHit.insertIndex;
+        smoothNeighborhood([idx - 1, idx, idx + 1]);
+        selectOnly(idx);
+      } else {
+        const branchHit = nearestBranchCurveHitScreen(sx, sy, org, s, 10);
+        if (branchHit) {
+          insertBranchMidpoint(branchHit.sec, branchHit.u, branchHit.pos, branchHit.tan);
+        } else {
+          const wp = worldFromScreenXZWithY(sx, sy, org, s, 0);
+          const snap = maybeSnapXZ(wp.x, wp.z);
+          points.push({
+            pos: v3(snap.x, 0, snap.z),
+            bank: 0,
+            node: 'smooth',
+            hin: { x: 0, z: 0 },
+            hout: { x: 0, z: 0 },
+          });
+          const idx = points.length - 1;
+          smoothNeighborhood([idx - 1, idx]);
+          selectOnly(idx);
+        }
+      }
       syncSelectedUI();
       cached = null;
     }
@@ -3021,7 +4870,7 @@
         const T = tangentAtIndex(roundTool.startIdx);
         const N = norm(v3(-T.z, 0, T.x));
         const sign = dot(v, N) >= 0 ? 1 : -1;
-        const r = clamp(Math.hypot(v.x, v.z), Math.max(1.5, num('roadWidth') * 1.3), 45);
+        const r = clamp(Math.hypot(v.x, v.z), Math.max(3.2, num('roadWidth') * 2.05), 45);
         roundTool.radius = r;
         roundTool.dir = sign;
         roundTool.center = add(S, mul(N, sign * r));
@@ -3037,18 +4886,60 @@
       const wp = worldFromScreenXZWithY(sx, sy, org, s, p.pos.y);
       const g = Math.max(0.01, num('grid'));
       const sp = snapXZ(wp.x, wp.z, g);
-      p.pos.x = sp.x;
-      p.pos.z = sp.z;
+      if (dragGroupOffsets && dragGroupOffsets.length > 1) {
+        for (const off of dragGroupOffsets) {
+          const tp = points[off.idx];
+          if (!tp) continue;
+          const sn = snapXZ(sp.x + off.dx, sp.z + off.dz, g);
+          tp.pos.x = sn.x;
+          tp.pos.z = sn.z;
+        }
+      } else {
+        p.pos.x = sp.x;
+        p.pos.z = sp.z;
+      }
       cached = null;
       return;
     }
 
-    if (dragHandle && points[dragHandle.i]) {
-      const p = points[dragHandle.i];
-      const wp = worldFromScreenXZWithY(sx, sy, org, s, p.pos.y);
-      const hx = wp.x - p.pos.x;
-      const hz = wp.z - p.pos.z;
-      setHandle(dragHandle.i, dragHandle.which, hx, hz, {
+    if (dragBranch) {
+      const sec = branchSections[dragBranch.sec];
+      const mid = sec?.mids?.[dragBranch.mid];
+      if (mid) {
+        const wp = worldFromScreenXZWithY(sx, sy, org, s, mid.y);
+        const g = Math.max(0.01, num('grid'));
+        const sp = snapXZ(wp.x, wp.z, g);
+        if (dragBranchGroupOffsets && dragBranchGroupOffsets.length > 1) {
+          for (const off of dragBranchGroupOffsets) {
+            const m = branchSections[off.sec]?.mids?.[off.mid];
+            if (!m) continue;
+            const sn = snapXZ(sp.x + off.dx, sp.z + off.dz, g);
+            m.x = sn.x;
+            m.z = sn.z;
+          }
+        } else {
+          mid.x = sp.x;
+          mid.z = sp.z;
+        }
+        cached = null;
+      }
+      return;
+    }
+
+    if (dragHandle) {
+      let p = null;
+      if (dragHandle.kind === 'branch') {
+        const ref = branchMidRef({ sec: dragHandle.sec, mid: dragHandle.mid });
+        p = ref ? { x: ref.mid.x, y: ref.mid.y, z: ref.mid.z } : null;
+      } else {
+        const mp = points[dragHandle.i];
+        p = mp ? { x: mp.pos.x, y: mp.pos.y, z: mp.pos.z } : null;
+      }
+      if (!p) return;
+      const wp = worldFromScreenXZWithY(sx, sy, org, s, p.y);
+      const hx = wp.x - p.x;
+      const hz = wp.z - p.z;
+      setHandle(dragHandle, dragHandle.which, hx, hz, {
         rotateOnly: e.altKey,
         breakMirror: e.shiftKey,
       });
@@ -3062,6 +4953,9 @@
       if (roundTool.phase === 1 && roundTool.radius > 0.5) roundTool.phase = 2;
     }
     dragIndex = null;
+    dragBranch = null;
+    dragBranchGroupOffsets = null;
+    dragGroupOffsets = null;
     dragHandle = null;
     isPanning2 = false;
     last2 = null;
@@ -3069,20 +4963,26 @@
 
   edit.addEventListener('wheel', (e) => {
     e.preventDefault();
-    if (e.ctrlKey || e.metaKey) {
-      const z = clamp(num('isoScale') - e.deltaY * 0.03, 10, 80);
-      $('isoScale').value = String(Math.round(z));
-      updateLabels();
-      return;
-    }
-    if (e.altKey && selected >= 0 && points[selected]) {
-      points[selected].pos.y = clamp(points[selected].pos.y - e.deltaY * 0.01, -20, 40);
+    if (e.altKey && (selectedBranchSet.size || selectedBranch)) {
+      applyHeightDeltaToBranchSelection(-e.deltaY * 0.01);
       syncSelectedUI();
       cached = null;
+      return;
     }
+    if (e.altKey && (selectedSet.size || (selected >= 0 && points[selected]))) {
+      applyHeightDeltaToMainSelection(-e.deltaY * 0.01);
+      syncSelectedUI();
+      cached = null;
+      return;
+    }
+    const zoomFactor = Math.exp(-e.deltaY * 0.0015);
+    const z = clamp(num('isoScale') * zoomFactor, 0.02, 240);
+    $('isoScale').value = z.toFixed(2);
+    updateLabels();
   }, { passive: false });
 
   // ---------- boot ----------
+  smoothAllPointHandles();
   syncSelectedUI();
   frame3D();
   render2D();
