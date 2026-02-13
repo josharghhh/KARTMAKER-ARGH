@@ -383,7 +383,7 @@
 
 <div id="bottomActions">
   <button id="saveBtn" type="button">Save</button>
-  <button id="loadBtn" type="button">Load</button>
+  <button id="loadBtn" type="button" title="Load file (Shift+Click restores local cache)">Load</button>
   <button id="toggleHintsBtn" type="button" title="Help and tool guide">?</button>
   <button id="resetBtn" type="button">Reset</button>
   <button id="clearBtn" type="button">Clear</button>
@@ -2971,6 +2971,140 @@
   });
   syncViewModeUI();
 
+  function collectControlState() {
+    const out = {};
+    const nodes = ctrlCard?.querySelectorAll('input, select');
+    if (!nodes) return out;
+    for (const el of nodes) {
+      if (!el.id) continue;
+      if (el.type === 'checkbox') out[el.id] = !!el.checked;
+      else out[el.id] = String(el.value);
+    }
+    return out;
+  }
+
+  function applyControlState(state) {
+    if (!state || typeof state !== 'object') return;
+    for (const [id, val] of Object.entries(state)) {
+      const el = $(id);
+      if (!el) continue;
+      if (el.type === 'checkbox') el.checked = !!val;
+      else el.value = String(val);
+    }
+  }
+
+  function buildProjectState() {
+    return {
+      version: 1,
+      savedAt: new Date().toISOString(),
+      mode,
+      viewMode,
+      ui: {
+        hintsHidden: document.body.classList.contains('hints-hidden'),
+        ctrlCollapsed: document.body.classList.contains('ctrl-collapsed'),
+      },
+      controls: collectControlState(),
+      scene: snapshot(),
+    };
+  }
+
+  function sanitizeLoadedProject(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    if (!raw.scene || typeof raw.scene !== 'object') return null;
+    return raw;
+  }
+
+  function applyProjectState(raw, opts = {}) {
+    const state = sanitizeLoadedProject(raw);
+    if (!state) return false;
+    const allowModes = new Set(['draw', 'move', 'erase', 'join', 'ysplit', 'roundabout', 'fenceplace', 'treeplace']);
+    applyControlState(state.controls || {});
+    const incomingMode = allowModes.has(state.mode) ? state.mode : 'draw';
+    setTool(incomingMode);
+    restoreSnap(state.scene);
+    if (state.ui && typeof state.ui === 'object') {
+      document.body.classList.toggle('hints-hidden', !!state.ui.hintsHidden);
+      document.body.classList.toggle('ctrl-collapsed', !!state.ui.ctrlCollapsed);
+    }
+    if (viewModes.includes(state.viewMode)) viewMode = state.viewMode;
+    syncViewModeUI();
+    syncCtrlToggleUI();
+    syncHintsUI();
+    updateLabels();
+    syncWorkspaceMode();
+    resizeAll();
+    cached = null;
+    frame3D();
+    if (!opts.skipPersist) {
+      try { localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(state)); } catch {}
+    }
+    return true;
+  }
+
+  function saveProjectToLocal(silent = true) {
+    try {
+      localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(buildProjectState()));
+      return true;
+    } catch (e) {
+      if (!silent) showErr('Save failed: ' + String(e?.message || e));
+      return false;
+    }
+  }
+
+  function loadProjectFromLocal(silent = true) {
+    try {
+      const raw = localStorage.getItem(PROJECT_STORAGE_KEY);
+      if (!raw) return false;
+      const data = JSON.parse(raw);
+      const ok = applyProjectState(data, { skipPersist: true });
+      if (!ok && !silent) showErr('Saved project is invalid.');
+      return ok;
+    } catch (e) {
+      if (!silent) showErr('Load failed: ' + String(e?.message || e));
+      return false;
+    }
+  }
+
+  function scheduleAutoSave(delay = 500) {
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => { saveProjectToLocal(true); }, delay);
+  }
+
+  saveBtn?.addEventListener('click', () => {
+    const state = buildProjectState();
+    try { localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(state)); }
+    catch (e) { showErr('Local save failed: ' + String(e?.message || e)); }
+    const name = (txt('trackName') || 'track').trim().replace(/[^a-z0-9._-]+/gi, '_') || 'track';
+    downloadText(name + '.mktrack.json', JSON.stringify(state, null, 2));
+  });
+
+  loadBtn?.addEventListener('click', (e) => {
+    if (e.shiftKey) {
+      loadProjectFromLocal(false);
+      return;
+    }
+    if (loadProjectFile) {
+      loadProjectFile.value = '';
+      loadProjectFile.click();
+    } else {
+      loadProjectFromLocal(false);
+    }
+  });
+
+  loadProjectFile?.addEventListener('change', async (e) => {
+    const f = e.target?.files?.[0];
+    if (!f) return;
+    try {
+      const text = await f.text();
+      const data = JSON.parse(text);
+      if (!applyProjectState(data)) showErr('Invalid project file.');
+    } catch (err) {
+      showErr('Could not load project file: ' + String(err?.message || err));
+    } finally {
+      if (loadProjectFile) loadProjectFile.value = '';
+    }
+  });
+
   function syncWorkspaceMode() {
     const m = txt('workspaceMode');
     if (window.innerWidth < 1200) {
@@ -3201,6 +3335,7 @@
     $('roadSnapYVal').textContent = num('roadSnapY').toFixed(2);
     updateSnapStatus();
     cached = null;
+    scheduleAutoSave(450);
   }
   function applyTerrainPreset(kind) {
     if (kind === 'clean') {
@@ -3291,6 +3426,9 @@
   $('terrainPresetBridge').addEventListener('click', () => applyTerrainPreset('bridge'));
   applyDefaultGeneratorSetup();
   updateLabels();
+  loadProjectFromLocal(true);
+  setInterval(() => saveProjectToLocal(true), 12000);
+  window.addEventListener('beforeunload', () => { saveProjectToLocal(true); });
 
   $('resetBtn').onclick = () => {
     pushUndo();
