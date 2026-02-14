@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>ARGH Track Generator • ARGHIO KART TOOLS V2</title>
+  <title>MK Track Generator • Iso 2D + 3D Preview + Pro Bezier + OBJ</title>
   <style>
     :root{--bg:#0b0f19;--ink:#e9ecf6;--muted:#aab4d4;--btn:#1b2440;--btn2:#151c32;--accent:#7aa2ff;--gold:#ffd36e;--red:#ff6e6e;--grn:#78ffa0;--blu:#78aaff;--split-l:1.05fr;--split-r:1.05fr;--dock-w:clamp(320px,30vw,430px);--bottom-ui-h:74px}
     *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
@@ -737,26 +737,17 @@
     const AB = sub(b.pos, a.pos);
     const flat = v3(AB.x, 0, AB.z);
     const L = Math.max(0.01, len(flat));
-    const abDir = norm(flat);
-    const tA0 = tangentAtIndex(sec.a);
-    const tB0 = tangentAtIndex(sec.b);
-    const tA = dot(tA0, abDir) >= 0 ? norm(v3(tA0.x, 0, tA0.z)) : mul(norm(v3(tA0.x, 0, tA0.z)), -1);
-    const tB = dot(tB0, mul(abDir, -1)) >= 0 ? norm(v3(tB0.x, 0, tB0.z)) : mul(norm(v3(tB0.x, 0, tB0.z)), -1);
-    const t = (Math.hypot(abDir.x, abDir.z) > 1e-6) ? abDir : tA;
+    const t = norm(flat);
     const n = norm(v3(-t.z, 0, t.x));
     const bendSide = (Number(sec.bend) || 1) >= 0 ? 1 : -1;
-    const alignA = clamp(dot(tA, abDir), -1, 1);
-    const alignB = clamp(dot(tB, mul(abDir, -1)), -1, 1);
-    const tangentAgree = clamp((alignA + alignB) * 0.5, 0, 1);
-    const bendScale = clamp(1 - tangentAgree * 0.88, 0.12, 1);
-    const bendAmt = Math.min(L * 0.30, Math.max(num('roadWidth') * 0.95, L * 0.13)) * bendScale;
+    const bendAmt = Math.min(L * 0.30, Math.max(num('roadWidth') * 0.95, L * 0.13));
     const bend = mul(n, bendAmt * bendSide * (sec.kind === 'fork' ? 1.15 : 0.8));
     const endScale = 0.30;
     return [
       {
         x: a.pos.x, y: a.pos.y, z: a.pos.z, u: 0, node: 'smooth', bevel: 0.65,
-        hin: { x: -tA.x * L * endScale - bend.x * 0.35, z: -tA.z * L * endScale - bend.z * 0.35 },
-        hout: { x: tA.x * L * endScale + bend.x, z: tA.z * L * endScale + bend.z },
+        hin: { x: -t.x * L * endScale - bend.x * 0.45, z: -t.z * L * endScale - bend.z * 0.45 },
+        hout: { x: t.x * L * endScale + bend.x, z: t.z * L * endScale + bend.z },
       },
       ...mids.map((m) => ({
         x: m.x, y: m.y, z: m.z, u: clamp(Number(m.u || 0), 0.001, 0.999),
@@ -767,8 +758,8 @@
       })),
       {
         x: b.pos.x, y: b.pos.y, z: b.pos.z, u: 1, node: 'smooth', bevel: 0.65,
-        hin: { x: -tB.x * L * endScale + bend.x, z: -tB.z * L * endScale + bend.z },
-        hout: { x: tB.x * L * endScale - bend.x * 0.35, z: tB.z * L * endScale - bend.z * 0.35 },
+        hin: { x: -t.x * L * endScale + bend.x, z: -t.z * L * endScale + bend.z },
+        hout: { x: t.x * L * endScale - bend.x * 0.45, z: t.z * L * endScale - bend.z * 0.45 },
       },
     ];
   }
@@ -1778,27 +1769,18 @@
     }
   }
 
-  function addJunctionPads(roadTop, width, opts = {}) {
+  function addJunctionPads(roadTop, width) {
     sanitizeBranchSections();
-    if (!roadTop || !Array.isArray(roadTop.verts)) return;
+    if (!roadTop || !Array.isArray(roadTop.verts) || !branchSections.length) return;
     const used = new Set();
     const junctionIdx = [];
     for (const sec of branchSections) {
       if (Number.isInteger(sec.a) && !used.has(sec.a)) { used.add(sec.a); junctionIdx.push(sec.a); }
       if (Number.isInteger(sec.b) && !used.has(sec.b)) { used.add(sec.b); junctionIdx.push(sec.b); }
     }
-    const net = opts?.net || null;
-    const mergeable = net ? gatherMergeableCrossings(net, {
-      clearance: Math.max(0.75, num('roadThickness') * 1.9),
-    }) : [];
-    if (!junctionIdx.length && !mergeable.length) return;
+    if (!junctionIdx.length) return;
 
     const worldUp = v3(0, 1, 0);
-    const roadSides = opts?.roadSides || null;
-    const roadBottom = opts?.roadBottom || null;
-    const thickness = Math.max(0.02, Number(opts?.thickness || num('roadThickness') || 0.2));
-    const padCenters = [];
-    const plannedPads = [];
     const addRingStrip = (mesh, inner, outer) => {
       const n = Math.min(inner.length, outer.length);
       if (n < 3) return;
@@ -1821,17 +1803,19 @@
     };
 
     const ringSteps = 22;
-    const yLift = 0.022;
+    const yLift = 0.014;
     const r0 = Math.max(0.14, width * 0.16);
     const r1 = Math.max(r0 + 0.08, width * 0.40);
     const r2 = Math.max(r1 + 0.08, width * 0.70);
-    const drawPadAt = (p, t, radiusMul = 1) => {
+    for (const idx of junctionIdx) {
+      const p = points[idx]?.pos;
+      if (!p) continue;
+      let t = tangentAtIndex(idx);
       t = norm(v3(t.x, 0, t.z));
       if (Math.hypot(t.x, t.z) < 1e-6) t = v3(1, 0, 0);
       const r = norm(v3(-t.z, 0, t.x));
       const rings = [[], [], []];
-      const radii = [r0 * radiusMul, r1 * radiusMul, r2 * radiusMul];
-      const center = meshAddVertex(roadTop, v3(p.x, p.y + yLift + 0.0035, p.z), 0.5, 0);
+      const radii = [r0, r1, r2];
       for (let ri = 0; ri < radii.length; ri++) {
         const rr = radii[ri];
         const vv = ri / Math.max(1, radii.length - 1);
@@ -1844,112 +1828,9 @@
           rings[ri].push(meshAddVertex(roadTop, v3(vx, vy, vz), (k / ringSteps), vv));
         }
       }
-      // Fill center to hide underlying overlap seams.
-      for (let i = 0; i < ringSteps; i++) {
-        const j = (i + 1) % ringSteps;
-        meshAddTri(roadTop, center, rings[0][i], rings[0][j]);
-      }
       addRingStrip(roadTop, rings[0], rings[1]);
       addRingStrip(roadTop, rings[1], rings[2]);
-    };
-
-    const faceCenter = (mesh, f) => {
-      const A = mesh?.verts?.[(f.a || 1) - 1];
-      const B = mesh?.verts?.[(f.b || 1) - 1];
-      const C = mesh?.verts?.[(f.c || 1) - 1];
-      if (!A || !B || !C) return null;
-      return v3((A.x + B.x + C.x) / 3, (A.y + B.y + C.y) / 3, (A.z + B.z + C.z) / 3);
-    };
-    const carveMeshAtPads = (mesh, radiusKey, yBand = Infinity) => {
-      if (!mesh || !Array.isArray(mesh.faces) || !mesh.faces.length || !padCenters.length) return;
-      const maxSafeFaces = 120000;
-      if (mesh.faces.length > maxSafeFaces) return;
-      const maxPadR = padCenters.reduce((m, p) => Math.max(m, Number(p?.[radiusKey] || 0)), 0);
-      const cell = Math.max(0.5, maxPadR * 1.35);
-      const grid = new Map();
-      const key = (ix, iz) => `${ix}|${iz}`;
-      for (let i = 0; i < padCenters.length; i++) {
-        const p = padCenters[i];
-        const r = Math.max(0.1, Number(p?.[radiusKey] || 0));
-        const minX = Math.floor((p.p.x - r) / cell);
-        const maxX = Math.floor((p.p.x + r) / cell);
-        const minZ = Math.floor((p.p.z - r) / cell);
-        const maxZ = Math.floor((p.p.z + r) / cell);
-        for (let ix = minX; ix <= maxX; ix++) {
-          for (let iz = minZ; iz <= maxZ; iz++) {
-            const k = key(ix, iz);
-            let arr = grid.get(k);
-            if (!arr) { arr = []; grid.set(k, arr); }
-            arr.push(i);
-          }
-        }
-      }
-      mesh.faces = mesh.faces.filter((f) => {
-        const c = faceCenter(mesh, f);
-        if (!c) return true;
-        const arr = grid.get(key(Math.floor(c.x / cell), Math.floor(c.z / cell)));
-        if (!arr || !arr.length) return true;
-        for (const pi of arr) {
-          const pad = padCenters[pi];
-          if (Math.abs(c.y - pad.p.y) > yBand) continue;
-          const dx = c.x - pad.p.x;
-          const dz = c.z - pad.p.z;
-          const r = pad[radiusKey];
-          if ((dx * dx + dz * dz) <= (r * r)) return false;
-        }
-        return true;
-      });
-    };
-    const addVerticalShell = (mesh) => {
-      if (!mesh || !padCenters.length) return;
-      const steps = 16;
-      for (const pad of padCenters) {
-        const r = pad.rShell;
-        const yTop = pad.p.y + 0.004;
-        const yBot = pad.p.y - thickness - 0.01;
-        const ringTop = [];
-        const ringBot = [];
-        for (let i = 0; i < steps; i++) {
-          const a = (i / steps) * Math.PI * 2;
-          const ca = Math.cos(a), sa = Math.sin(a);
-          const px = pad.p.x + ca * r;
-          const pz = pad.p.z + sa * r;
-          ringTop.push(meshAddVertex(mesh, v3(px, yTop, pz), i / steps, 0));
-          ringBot.push(meshAddVertex(mesh, v3(px, yBot, pz), i / steps, 1));
-        }
-        for (let i = 0; i < steps; i++) {
-          const j = (i + 1) % steps;
-          meshAddTri(mesh, ringTop[i], ringBot[j], ringBot[i]);
-          meshAddTri(mesh, ringTop[i], ringTop[j], ringBot[j]);
-        }
-      }
-    };
-
-    for (const idx of junctionIdx) {
-      const p = points[idx]?.pos;
-      if (!p) continue;
-      const t = tangentAtIndex(idx);
-      plannedPads.push({ p: v3(p.x, p.y, p.z), t, mul: 1 });
-      const rr = Math.max(r2 * 1.06, width * 0.64);
-      padCenters.push({ p: v3(p.x, p.y, p.z), rTop: rr, rShell: Math.max(rr * 0.95, width * 0.54) });
     }
-    const maxMergePads = 96;
-    for (let i = 0; i < mergeable.length && i < maxMergePads; i++) {
-      const m = mergeable[i];
-      const p = v3(m.x, m.y, m.z);
-      const a0 = m.a?.p0 || null;
-      const a1 = m.a?.p1 || null;
-      const t = (a0 && a1) ? norm(v3(a1.x - a0.x, 0, a1.z - a0.z)) : v3(1, 0, 0);
-      plannedPads.push({ p, t, mul: 1.12 });
-      const rr = Math.max(r2 * 1.20, width * 0.70);
-      padCenters.push({ p, rTop: rr, rShell: Math.max(rr * 0.95, width * 0.58) });
-    }
-    carveMeshAtPads(roadTop, 'rTop', Math.max(0.26, thickness * 2.2));
-    carveMeshAtPads(roadSides, 'rShell', thickness * 3.8);
-    carveMeshAtPads(roadBottom, 'rShell', thickness * 3.8);
-    for (const pad of plannedPads) drawPadAt(pad.p, pad.t, pad.mul);
-    addVerticalShell(roadSides);
-    addVerticalShell(roadBottom);
   }
 
   // ---------- mesh generation ----------
@@ -2912,11 +2793,8 @@
       }
     }
 
-    // Fill shoulder/curb around junctions and mergeable crossings so all surfaces meet cleanly.
-    if (junctionPads) {
-      const mergeableTheme = opts?.net ? gatherMergeableCrossings(opts.net, {
-        clearance: Math.max(0.75, roadThickness * 1.9),
-      }) : [];
+    // Fill shoulder/curb around branch junctions so all surfaces meet cleanly.
+    if (junctionPads && Array.isArray(branchSections) && branchSections.length) {
       const used = new Set();
       const junctionIdx = [];
       for (const sec of branchSections) {
@@ -2926,27 +2804,7 @@
           junctionIdx.push(i);
         }
       }
-      const mergePads = [];
-      for (const m of mergeableTheme) {
-        const p = v3(m.x, m.y, m.z);
-        const a0 = m.a?.p0 || null;
-        const a1 = m.a?.p1 || null;
-        const t = (a0 && a1) ? norm(v3(a1.x - a0.x, 0, a1.z - a0.z)) : v3(1, 0, 0);
-        const ref = nearestRoadFrame(p);
-        mergePads.push({ p, t, idx: ref?.i ?? 0 });
-      }
-      if (!junctionIdx.length && !mergePads.length) {
-        enforceCurbOutwardNormals();
-        if (shoulders.faces.length) out.push({ mesh: shoulders, kind: 'grass' });
-        if (curbs.faces.length) out.push({ mesh: curbs, kind: 'curb' });
-        if (underdeck.faces.length) out.push({ mesh: underdeck, kind: 'underdeck' });
-        if (bridgeDeckFreeway.faces.length) out.push({ mesh: bridgeDeckFreeway, kind: 'bridgeDeckFreeway' });
-        if (bridgeDeckWood.faces.length) out.push({ mesh: bridgeDeckWood, kind: 'bridgeDeckWood' });
-        if (bridgeDeckSteel.faces.length) out.push({ mesh: bridgeDeckSteel, kind: 'bridgeDeckSteel' });
-        return out;
-      }
       const steps = 20;
-      const themePadCenters = [];
       const addStrip = (mesh, inner, outer, flip = false) => {
         const n = Math.min(inner.length, outer.length);
         if (n < 3) return;
@@ -2963,64 +2821,22 @@
           }
         }
       };
-      const carveThemeMeshAtPads = (mesh, radiusKey, yBand = Infinity) => {
-        if (!mesh || !Array.isArray(mesh.faces) || !mesh.faces.length || !themePadCenters.length) return;
-        const maxSafeFaces = 120000;
-        if (mesh.faces.length > maxSafeFaces) return;
-        const maxPadR = themePadCenters.reduce((m, p) => Math.max(m, Number(p?.[radiusKey] || 0)), 0);
-        const cell = Math.max(0.5, maxPadR * 1.35);
-        const grid = new Map();
-        const key = (ix, iz) => `${ix}|${iz}`;
-        for (let i = 0; i < themePadCenters.length; i++) {
-          const p = themePadCenters[i];
-          const r = Math.max(0.1, Number(p?.[radiusKey] || 0));
-          const minX = Math.floor((p.p.x - r) / cell);
-          const maxX = Math.floor((p.p.x + r) / cell);
-          const minZ = Math.floor((p.p.z - r) / cell);
-          const maxZ = Math.floor((p.p.z + r) / cell);
-          for (let ix = minX; ix <= maxX; ix++) {
-            for (let iz = minZ; iz <= maxZ; iz++) {
-              const k = key(ix, iz);
-              let arr = grid.get(k);
-              if (!arr) { arr = []; grid.set(k, arr); }
-              arr.push(i);
-            }
-          }
-        }
-        mesh.faces = mesh.faces.filter((f) => {
-          const A = mesh.verts[f.a - 1], B = mesh.verts[f.b - 1], C = mesh.verts[f.c - 1];
-          if (!A || !B || !C) return true;
-          const cx = (A.x + B.x + C.x) / 3;
-          const cy = (A.y + B.y + C.y) / 3;
-          const cz = (A.z + B.z + C.z) / 3;
-          const arr = grid.get(key(Math.floor(cx / cell), Math.floor(cz / cell)));
-          if (!arr || !arr.length) return true;
-          for (const pi of arr) {
-            const pad = themePadCenters[pi];
-            if (Math.abs(cy - pad.p.y) > yBand) continue;
-            const dx = cx - pad.p.x;
-            const dz = cz - pad.p.z;
-            const rr = pad[radiusKey];
-            if ((dx * dx + dz * dz) <= (rr * rr)) return false;
-          }
-          return true;
-        });
-      };
-      const drawJunctionThemePad = (p, idx, tangentDir, radiusScale = 1) => {
-        const safeIdx = clamp(Number(idx || 0), 0, samples.length - 1);
-        if (bridgeSupp[safeIdx] > 0.90) return;
-        let t = tangentDir;
+      for (const idx of junctionIdx) {
+        if (bridgeSupp[idx] > 0.90) continue;
+        const p = points[idx]?.pos;
+        if (!p) continue;
+        let t = tangentAtIndex(idx);
         t = norm(v3(t.x, 0, t.z));
         if (Math.hypot(t.x, t.z) < 1e-6) t = v3(1, 0, 0);
         const r = norm(v3(-t.z, 0, t.x));
 
-        const curbInnerR = (half + 0.03) * radiusScale;
-        const curbOuterR = (half + curbWBy[safeIdx]) * radiusScale;
+        const curbInnerR = half + 0.03;
+        const curbOuterR = half + curbWBy[idx];
         const curbInnerTop = [];
         const curbOuterTop = [];
         const curbInnerBase = [];
         const curbOuterBase = [];
-        const curbLift = curbHBy[safeIdx];
+        const curbLift = curbHBy[idx];
         for (let k = 0; k < steps; k++) {
           const a = (k / steps) * Math.PI * 2;
           const ca = Math.cos(a), sa = Math.sin(a);
@@ -3042,7 +2858,7 @@
         const shoulderOuterY = -(0.36 + shoulderWidth * 0.04);
         for (let gi = 0; gi < grassTs.length; gi++) {
           const tt = grassTs[gi];
-          const rr = (half + curbWBy[safeIdx] + shoulderWBy[safeIdx] * tt) * radiusScale;
+          const rr = half + curbWBy[idx] + shoulderWBy[idx] * tt;
           const round = (1 - Math.cos(tt * Math.PI * 0.96)) * 0.5;
           const y = p.y + shoulderSeamY * (1 - round) + shoulderOuterY * round;
           const ring = [];
@@ -3056,32 +2872,6 @@
         }
         addStrip(shoulders, grassRings[0], grassRings[1], false);
         addStrip(shoulders, grassRings[1], grassRings[2], false);
-      };
-      for (const idx of junctionIdx) {
-        const p = points[idx]?.pos;
-        if (!p) continue;
-        const safeIdx = clamp(Number(nearestRoadFrame(p)?.i ?? 0), 0, samples.length - 1);
-        const baseR = Math.max(half + curbWBy[safeIdx] + shoulderWBy[safeIdx], roadWidth * 0.58);
-        themePadCenters.push({ p: v3(p.x, p.y, p.z), rCurb: baseR * 0.84, rShoulder: baseR });
-      }
-      const maxMergePadsTheme = 96;
-      for (let i = 0; i < mergePads.length && i < maxMergePadsTheme; i++) {
-        const m = mergePads[i];
-        const safeIdx = clamp(Number(m.idx || 0), 0, samples.length - 1);
-        const baseR = Math.max((half + curbWBy[safeIdx] + shoulderWBy[safeIdx]) * 1.1, roadWidth * 0.70);
-        themePadCenters.push({ p: v3(m.p.x, m.p.y, m.p.z), rCurb: baseR * 0.86, rShoulder: baseR });
-      }
-      carveThemeMeshAtPads(curbs, 'rCurb', Math.max(0.20, curbHeight * 10));
-      carveThemeMeshAtPads(shoulders, 'rShoulder', Math.max(0.5, roadThickness * 2.2));
-      carveThemeMeshAtPads(underdeck, 'rShoulder', Math.max(0.7, roadThickness * 2.8));
-      for (const idx of junctionIdx) {
-        const p = points[idx]?.pos;
-        if (!p) continue;
-        drawJunctionThemePad(p, idx, tangentAtIndex(idx), 1);
-      }
-      for (let i = 0; i < mergePads.length && i < maxMergePadsTheme; i++) {
-        const m = mergePads[i];
-        drawJunctionThemePad(m.p, m.idx, m.t, 1.10);
       }
     }
 
@@ -3859,14 +3649,6 @@
   let latestMathReport = null;
   let mathReportCacheKey = '';
   let mathReportCacheAt = 0;
-  let sceneVersion = 1;
-  let overlay2DCache = { version: -1, net: null, netDesc: null, mathReport: null };
-
-  function bumpSceneVersion() {
-    sceneVersion++;
-    cached = null;
-    overlay2DCache.version = -1;
-  }
 
   // ---------- undo / redo ----------
   const undoStack = [];
@@ -4024,7 +3806,7 @@
     gizmoHoverAxis = null;
     gizmoGhost = null;
     syncSelectedUI();
-    bumpSceneVersion();
+    cached = null;
   }
   function pushUndo() {
     undoStack.push(snapshot());
@@ -4155,7 +3937,7 @@
         }
         clearPropSelection();
         syncSelectedUI();
-        bumpSceneVersion();
+        cached = null;
         return;
       }
       sanitizeBranchSelection();
@@ -4174,7 +3956,7 @@
         selectedBranch = null;
         selectedBranchSet.clear();
         syncSelectedUI();
-        bumpSceneVersion();
+        cached = null;
         return;
       }
       if (selectedSet.size > 0 || selected >= 0) {
@@ -4190,7 +3972,7 @@
         selected = -1;
         selectedSet.clear();
         syncSelectedUI();
-        bumpSceneVersion();
+        cached = null;
       }
     }
   });
@@ -4508,7 +4290,6 @@
     setTool('draw');
     setDrawAnchor(-1);
     drawTool.pendingNewLine = true;
-    if ($('closed')) $('closed').checked = false;
     syncControlToolHint();
   }
 
@@ -4541,7 +4322,6 @@
     if (drawTool.pendingNewLine && oldLast >= 0) {
       mainBreaks.add(oldLast);
       sanitizeMainBreaks();
-      if ($('closed')) $('closed').checked = false;
     }
     drawTool.pendingNewLine = false;
     smoothNeighborhood([idx - 1, idx]);
@@ -5502,55 +5282,6 @@
     };
   }
 
-  function pointToSegmentXZDetail(p, a, b, eps = 1e-7) {
-    const vx = b.x - a.x;
-    const vz = b.z - a.z;
-    const wx = p.x - a.x;
-    const wz = p.z - a.z;
-    const len2 = vx * vx + vz * vz;
-    if (len2 <= eps) {
-      return { t: 0, x: a.x, z: a.z, dist: Math.hypot(p.x - a.x, p.z - a.z) };
-    }
-    const t = clamp((wx * vx + wz * vz) / len2, 0, 1);
-    const x = a.x + vx * t;
-    const z = a.z + vz * t;
-    return { t, x, z, dist: Math.hypot(p.x - x, p.z - z) };
-  }
-
-  function segmentDirXZ(seg) {
-    const dx = (seg?.b?.x || 0) - (seg?.a?.x || 0);
-    const dz = (seg?.b?.z || 0) - (seg?.a?.z || 0);
-    const m = Math.hypot(dx, dz);
-    if (m <= 1e-7) return v3(1, 0, 0);
-    return v3(dx / m, 0, dz / m);
-  }
-
-  function segmentsHaveIntentionalMergeTouch(sa, sb, minGap, clearanceY) {
-    const touchDist = Math.max(0.12, minGap * 0.26);
-    const dirA = segmentDirXZ(sa);
-    const dirB = segmentDirXZ(sb);
-    const parallel = Math.abs(dot(dirA, dirB)) >= 0.45;
-    if (!parallel) return false;
-
-    const ptsA = [sa.a, sa.b];
-    const ptsB = [sb.a, sb.b];
-    for (const p of ptsA) {
-      const hit = pointToSegmentXZDetail(p, sb.a, sb.b);
-      if (hit.dist > touchDist) continue;
-      const yB = sb.a.y + (sb.b.y - sb.a.y) * hit.t;
-      if (Math.abs((p.y || 0) - yB) > clearanceY * 0.55) continue;
-      return true;
-    }
-    for (const p of ptsB) {
-      const hit = pointToSegmentXZDetail(p, sa.a, sa.b);
-      if (hit.dist > touchDist) continue;
-      const yA = sa.a.y + (sa.b.y - sa.a.y) * hit.t;
-      if (Math.abs((p.y || 0) - yA) > clearanceY * 0.55) continue;
-      return true;
-    }
-    return false;
-  }
-
   function buildNetworkSegmentsForCrossing(net) {
     const segs = [];
     const addPolyline = (samples, closed, polyKind, polyIndex) => {
@@ -5674,16 +5405,12 @@
             polyIndex: s.polyIndex,
             segIndex: s.segIndex,
             t: hit.t,
-            p0: s.a,
-            p1: s.b,
           },
           b: {
             polyKind: o.polyKind,
             polyIndex: o.polyIndex,
             segIndex: o.segIndex,
             t: hit.u,
-            p0: o.a,
-            p1: o.b,
           },
         });
       }
@@ -5702,40 +5429,6 @@
     return { crossings: out, pairChecks, truncated };
   }
 
-  function gatherMergeableCrossings(net, opts = {}) {
-    const clearance = Math.max(0.2, Number(opts.clearance || Math.max(0.75, num('roadThickness') * 1.9)));
-    const scan = gatherNetworkCrossings(net, {
-      clearance,
-      includeStacked: false,
-      dedupDist: Math.max(0.20, Number(opts.dedupDist || Math.max(0.24, num('roadWidth') * 0.16))),
-      maxPairs: clamp(Math.round(Number(opts.maxPairs || 260000)), 10000, 1200000),
-    });
-    const out = [];
-    for (const c of (scan.crossings || [])) {
-      if (c.type !== 'conflict') continue;
-      const a0 = c.a?.p0 || null;
-      const a1 = c.a?.p1 || null;
-      const b0 = c.b?.p0 || null;
-      const b1 = c.b?.p1 || null;
-      let ang = Math.PI * 0.5;
-      if (a0 && a1 && b0 && b1) {
-        const da = norm(v3(a1.x - a0.x, 0, a1.z - a0.z));
-        const db = norm(v3(b1.x - b0.x, 0, b1.z - b0.z));
-        ang = Math.acos(clamp(Math.abs(dot(da, db)), -1, 1));
-      }
-      if (ang < (12 * Math.PI / 180)) continue;
-      out.push({
-        x: c.x,
-        y: Math.max(c.yA || c.y || 0, c.yB || c.y || 0) + 0.012,
-        z: c.z,
-        dy: c.dy || 0,
-        a: c.a,
-        b: c.b,
-      });
-    }
-    return out;
-  }
-
   // Detect non-intersecting but too-close same-level roads (parallel squeeze / side overlap).
   function gatherNetworkSideClearanceConflicts(net, opts = {}) {
     const minGap = Math.max(0.45, Number(opts.minGap || Math.max(0.9, num('roadWidth') * 0.98)));
@@ -5744,7 +5437,7 @@
     const maxPairs = clamp(Math.round(Number(opts.maxPairs || 240000)), 10000, 1200000);
     const cellSize = Math.max(0.8, Number(opts.cellSize || Math.max(minGap * 1.35, num('roadWidth') * 0.95)));
     const invCell = 1 / cellSize;
-    const endpointTouchEps = Math.max(0.12, minGap * 0.22);
+    const endpointTouchEps = Math.max(0.06, minGap * 0.08);
     const mainOnly = !!opts.mainOnly;
     const ignoreSamePolyline = opts.ignoreSamePolyline !== false;
     let segs = buildNetworkSegmentsForCrossing(net);
@@ -5829,7 +5522,6 @@
           Math.hypot(s.b.x - o.a.x, s.b.z - o.a.z) <= endpointTouchEps ||
           Math.hypot(s.b.x - o.b.x, s.b.z - o.b.z) <= endpointTouchEps;
         if (sharesEndpoint) continue;
-        if (segmentsHaveIntentionalMergeTouch(s, o, minGap, clearanceY)) continue;
         if (segmentIntersectionXZDetail(s.a, s.b, o.a, o.b, 1e-6)) continue;
         const near = segmentClosestXZDetail(s.a, s.b, o.a, o.b, 1e-7);
         if (!near || !Number.isFinite(near.dist) || near.dist >= minGap) continue;
@@ -6014,8 +5706,7 @@
     const closedWanted = !!chk('closed');
     const closedMain = !!net?.mainClosed;
     const uniquePts = uniqueMainPointCount();
-    const hasDetachedMain = mainBreaks && mainBreaks.size > 0;
-    if (closedWanted && !closedMain && !hasDetachedMain) issues.push('Closed loop needs at least 3 unique control points');
+    if (closedWanted && !closedMain) issues.push('Closed loop needs at least 3 unique control points');
 
     const mainSamples = Array.isArray(net?.main) ? net.main : [];
     let minSeg = Infinity;
@@ -6061,20 +5752,10 @@
       maxPairs: 140000,
     });
     const overlapCrossings = overlapScan.crossings;
-    const mergeableCrossings = gatherMergeableCrossings(net, {
-      clearance: overlapClearance,
-      dedupDist: 0.24,
-      maxPairs: 140000,
-    });
-    const mergeableDedupDist = Math.max(0.18, num('roadWidth') * 0.14);
-    const isMergeable = (c) => mergeableCrossings.some((m) => Math.hypot((m.x || 0) - (c.x || 0), (m.z || 0) - (c.z || 0)) <= mergeableDedupDist);
-    const overlapCrossingsTagged = overlapCrossings.map((c) => {
-      if (c.type === 'conflict' && isMergeable(c)) return { ...c, type: 'mergeable' };
-      return c;
-    });
-    const overlapCrossConflicts = overlapCrossings.filter((o) => o.type === 'conflict' && !isMergeable(o)).length;
-    const overlapStacked = overlapCrossings.filter((o) => o.type === 'stacked').length;
+    const overlapCrossConflicts = overlapCrossings.filter((o) => o.type === 'conflict').length;
+    const overlapStacked = overlapCrossings.length - overlapCrossConflicts;
     if (overlapCrossConflicts > 0) issues.push(`${overlapCrossConflicts} overlap conflict${overlapCrossConflicts === 1 ? '' : 's'} (same-level crossing)`);
+
     const sideGapTarget = Math.max(0.85, num('roadWidth') * 0.90);
     const hasBranches = Array.isArray(net?.branches) && net.branches.length > 0;
     const sideGapScan = hasBranches
@@ -6092,7 +5773,7 @@
       issues.push(`${sideGapConflicts.length} side-clearance conflict${sideGapConflicts.length === 1 ? '' : 's'} (< ${sideGapTarget.toFixed(2)} center gap)`);
     }
 
-    const overlaps = overlapCrossingsTagged.concat(sideGapConflicts);
+    const overlaps = overlapCrossings.concat(sideGapConflicts);
     const overlapConflicts = overlapCrossConflicts + sideGapConflicts.length;
     if (overlapScan.truncated || sideGapScan.truncated) issues.push('Overlap scan hit safety limit (lower detail to inspect every crossing)');
 
@@ -6109,7 +5790,6 @@
       overlaps,
       overlapConflicts,
       overlapStacked,
-      mergeableCrossings: mergeableCrossings.length,
       overlapPairChecks: overlapScan.pairChecks + (sideGapScan.pairChecks || 0),
       overlapTruncated: overlapScan.truncated || !!sideGapScan.truncated,
       sideGapConflicts: sideGapConflicts.length,
@@ -6183,17 +5863,6 @@
     return report;
   }
 
-  function getOverlay2DData() {
-    if (overlay2DCache.version === sceneVersion && overlay2DCache.net && overlay2DCache.netDesc && overlay2DCache.mathReport) {
-      return overlay2DCache;
-    }
-    const net = sampleRoadNetwork();
-    const netDesc = buildRoadNetworkDescriptor(net);
-    const mathReport = getMathConformityReportCached(net, netDesc, true);
-    overlay2DCache = { version: sceneVersion, net, netDesc, mathReport };
-    return overlay2DCache;
-  }
-
   function syncMathConformityUI(report) {
     const el = $('ctrlMathStatus');
     if (!el || !report) return;
@@ -6203,8 +5872,7 @@
       const closedTxt = report.closedMain ? 'closed' : 'open';
       const stackedTxt = report.overlapStacked > 0 ? ` • stacked ${report.overlapStacked}` : '';
       const autoTxt = report.autoOverpassAdjusted > 0 ? ` • auto overpass ${report.autoOverpassAdjusted}` : '';
-      const mergeTxt = report.mergeableCrossings > 0 ? ` • mergeable ${report.mergeableCrossings}` : '';
-      el.textContent = `Math OK • ${closedTxt} • unique ${report.uniquePts} • min seg ${report.minSeg.toFixed(2)}${stackedTxt}${mergeTxt}${autoTxt}`;
+      el.textContent = `Math OK • ${closedTxt} • unique ${report.uniquePts} • min seg ${report.minSeg.toFixed(2)}${stackedTxt}${autoTxt}`;
       el.title = 'No conformity issues detected in current topology checks.';
       return;
     }
@@ -6231,7 +5899,6 @@
     $('ctrlToolSplit')?.classList.toggle('active', t === 'ysplit');
     $('ctrlToolJoin')?.classList.toggle('active', t === 'join');
     $('ctrlToolRound')?.classList.toggle('active', t === 'roundabout');
-    $('ctrlToolPropEdit')?.classList.toggle('active', t === 'propedit');
     joinTool = { phase: 0, startIdx: -1 };
     ySplitTool = { phase: 0, startIdx: -1, action: 'split' };
     roundTool = { phase: 0, startIdx: -1, center: null, radius: 0, dir: 1, isSizing: false, previewExit: null };
@@ -6274,7 +5941,7 @@
     placedBoulders = [];
     fencePlaceStart = null;
     clearPropSelection();
-    bumpSceneVersion();
+    cached = null;
     syncSelectedUI();
   };
 
@@ -6376,7 +6043,6 @@
       <button id="ctrlToolSplit" type="button">Split Road</button>
       <button id="ctrlToolJoin" type="button">Connect Roads</button>
       <button id="ctrlToolRound" type="button">Roundabout</button>
-      <button id="ctrlToolPropEdit" type="button">Prop Edit</button>
     `;
     header.appendChild(quickTools);
 
@@ -6404,7 +6070,6 @@
       ['ctrlToolSplit', 'ysplit'],
       ['ctrlToolJoin', 'join'],
       ['ctrlToolRound', 'roundabout'],
-      ['ctrlToolPropEdit', 'propedit'],
     ];
     for (const [id, tool] of toolButtons) {
       $(id)?.addEventListener('click', () => setTool(tool));
@@ -6561,7 +6226,7 @@
     updateLabels();
     syncWorkspaceMode();
     resizeAll();
-    bumpSceneVersion();
+    cached = null;
     frame3D();
     if (!opts.skipPersist) {
       try { localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(state)); } catch {}
@@ -6723,14 +6388,14 @@
       pushUndo();
       ref.mid.node = type;
       $('selNode').value = type;
-      bumpSceneVersion();
+      cached = null;
       return;
     }
     if (selected < 0) return;
     pushUndo();
     points[selected].node = type;
     $('selNode').value = type;
-    bumpSceneVersion();
+    cached = null;
   }
 
   function selectedBranchSectionRef() {
@@ -6819,7 +6484,7 @@
     ref.sec.speedTarget = spec.speedTarget;
     ref.sec.minRadius = spec.minRadius;
     ref.sec.maxGrade = spec.maxGrade;
-    bumpSceneVersion();
+    cached = null;
     syncSelectedBranchEdgeUI();
   }
 
@@ -6909,7 +6574,7 @@
       const delta = nextY - Number(ref.mid.y || 0);
       applyHeightDeltaToBranchSelection(delta);
       syncSelectedUI();
-      bumpSceneVersion();
+      cached = null;
       return;
     }
     if (selected < 0 && !selectedSet.size) return;
@@ -6921,7 +6586,7 @@
     const delta = nextY - Number(ref.pos.y || 0);
     applyHeightDeltaToMainSelection(delta);
     syncSelectedUI();
-    bumpSceneVersion();
+    cached = null;
   });
   $('selBank').addEventListener('input', () => {
     if (selectedBranch) {
@@ -6930,14 +6595,14 @@
       pushUndo();
       ref.mid.bevel = clamp(Number($('selBank').value), 0, 1);
       $('selBankVal').textContent = ref.mid.bevel.toFixed(2);
-      bumpSceneVersion();
+      cached = null;
       return;
     }
     if (selected < 0) return;
     pushUndo();
     points[selected].bank = Number($('selBank').value);
     $('selBankVal').textContent = points[selected].bank.toFixed(1);
-    bumpSceneVersion();
+    cached = null;
   });
 
   $('selBranchClass').addEventListener('change', () => {
@@ -7004,7 +6669,7 @@
     syncRoadClassDefaultsUI();
     syncSelectedBranchEdgeUI();
     updateSnapStatus();
-    bumpSceneVersion();
+    cached = null;
     scheduleAutoSave(450);
   }
   function applyTerrainPreset(kind) {
@@ -7176,7 +6841,7 @@
     gizmoHoverAxis = null;
     gizmoGhost = null;
     syncSelectedUI();
-    bumpSceneVersion();
+    cached = null;
     frame3D();
   };
   $('clearBtn').onclick = () => {
@@ -7212,7 +6877,7 @@
     gizmoHoverAxis = null;
     gizmoGhost = null;
     syncSelectedUI();
-    bumpSceneVersion();
+    cached = null;
   };
 
   function angDelta(a, b) {
@@ -8197,7 +7862,7 @@
     }
     if (!best) {
       updateLabels();
-      bumpSceneVersion();
+      cached = null;
       frame3D();
       return;
     }
@@ -8241,7 +7906,7 @@
     gizmoGhost = null;
     syncSelectedUI();
     updateLabels();
-    bumpSceneVersion();
+    cached = null;
     frame3D();
   }
   $('genBtn').onclick = runGenerateTrack;
@@ -8300,12 +7965,7 @@
       if (roadSides && extra.roadSides) mergeMeshInto(roadSides, extra.roadSides);
       if (roadBottom && extra.roadBottom) mergeMeshInto(roadBottom, extra.roadBottom);
     }
-    addJunctionPads(roadTop, networkRoadWidthMax, {
-      net,
-      roadSides,
-      roadBottom,
-      thickness: num('roadThickness'),
-    });
+    addJunctionPads(roadTop, networkRoadWidthMax);
     const terrain = chk('terrainOn')
       ? buildTerrainMesh(net.all, {
         roadWidth: networkRoadWidthMax,
@@ -8329,7 +7989,6 @@
       closed: mainClosed,
       capEnds: !mainClosed,
       junctionPads: true,
-      net,
     });
     const themeBranches = [];
     for (const b of branchThemeInputs) {
@@ -8505,12 +8164,7 @@
       if (roadSides && extra.roadSides) mergeMeshInto(roadSides, extra.roadSides);
       if (roadBottom && extra.roadBottom) mergeMeshInto(roadBottom, extra.roadBottom);
     }
-    addJunctionPads(roadTop, networkRoadWidthMax, {
-      net,
-      roadSides,
-      roadBottom,
-      thickness: num('roadThickness'),
-    });
+    addJunctionPads(roadTop, networkRoadWidthMax);
     const terrain = chk('terrainOn')
       ? buildTerrainMesh(net.all, {
         roadWidth: networkRoadWidthMax,
@@ -8534,7 +8188,6 @@
       closed: mainClosed,
       capEnds: !mainClosed,
       junctionPads: true,
-      net,
     });
     const themeBranches = [];
     for (const b of branchThemeInputs) {
@@ -8765,18 +8418,8 @@
     const segs = 30;
     const ringFor = (axis) => {
       const pts = [];
-      let U = v3(1, 0, 0);
-      let V = v3(0, 0, 1);
-      if (axis === 'x') {
-        U = v3(0, 1, 0);
-        V = v3(0, 0, 1);
-      } else if (axis === 'y') {
-        U = v3(1, 0, 0);
-        V = v3(0, 0, 1);
-      } else if (axis === 'z') {
-        U = v3(1, 0, 0);
-        V = v3(0, 1, 0);
-      }
+      const U = axis === 'x' ? v3(0, 1, 0) : v3(1, 0, 0);
+      const V = axis === 'z' ? v3(0, 1, 0) : v3(0, 0, 1);
       for (let i = 0; i <= segs; i++) {
         const a = (i / segs) * Math.PI * 2;
         const local = add(mul(U, Math.cos(a) * ringRadius), mul(V, Math.sin(a) * ringRadius));
@@ -8898,10 +8541,6 @@
 
   let lastCamTick = performance.now();
   function render3D() {
-    if (viewCard.classList.contains('hidden')) {
-      requestAnimationFrame(render3D);
-      return;
-    }
     try {
       const r = viewWrap.getBoundingClientRect();
       const w = r.width, h = r.height;
@@ -9702,7 +9341,7 @@
           ySplitTool.startIdx = idx;
           ySplitTool.action = 'split';
           syncSelectedUI();
-          bumpSceneVersion();
+          cached = null;
           return true;
         }
         ySplitTool.phase = 1;
@@ -9723,7 +9362,7 @@
           }
           ySplitTool = { phase: 0, startIdx: -1, action: 'split' };
           syncSelectedUI();
-          bumpSceneVersion();
+          cached = null;
         }
       }
       return true;
@@ -9743,7 +9382,7 @@
         joinSection(joinTool.startIdx, hitPoint);
         joinTool = { phase: 0, startIdx: -1 };
         syncSelectedUI();
-        bumpSceneVersion();
+        cached = null;
       }
       return true;
     }
@@ -9780,7 +9419,7 @@
         roundTool = { phase: 0, startIdx: -1, center: null, radius: 0, dir: 1, isSizing: false, previewExit: null };
         setTool('draw');
         syncSelectedUI();
-        bumpSceneVersion();
+        cached = null;
       }
       return true;
     }
@@ -9794,7 +9433,7 @@
         selectedBranch = null;
         selectedBranchSet.clear();
         syncSelectedUI();
-        bumpSceneVersion();
+        cached = null;
         return true;
       }
       if (hitPoint >= 0) {
@@ -9803,7 +9442,7 @@
         remapSplitEndsForSplice(hitPoint, 1, 0);
         selectOnly(-1);
         syncSelectedUI();
-        bumpSceneVersion();
+        cached = null;
         return true;
       }
       const hitBranchCurve = nearestBranchCurveHit3D(sx, sy, eye, basis, w, h, 12);
@@ -9814,7 +9453,7 @@
         selectedBranch = null;
         selectedBranchSet.clear();
         syncSelectedUI();
-        bumpSceneVersion();
+        cached = null;
       }
       return true;
     }
@@ -9842,7 +9481,7 @@
           const didJoin = joinSection(anchorIdx, hitPoint);
           if (didJoin) {
             setDrawAnchor(selected >= 0 ? selected : hitPoint);
-            bumpSceneVersion();
+            cached = null;
           } else {
             selectOnly(hitPoint);
             setDrawAnchor(hitPoint);
@@ -9904,7 +9543,7 @@
         }
       }
       syncSelectedUI();
-      bumpSceneVersion();
+      cached = null;
       return true;
     }
 
@@ -9979,7 +9618,7 @@
         });
         bezier3DHover = { ...bezier3DDrag.target, which: bezier3DDrag.which };
         syncSelectedUI();
-        bumpSceneVersion();
+        cached = null;
         view.style.cursor = 'grabbing';
         return;
       }
@@ -10072,7 +9711,7 @@
         }
       }
       syncSelectedUI();
-      bumpSceneVersion();
+      cached = null;
       view.style.cursor = 'grabbing';
       return;
     }
@@ -10165,7 +9804,7 @@
           pushUndo();
           clearPropSelection();
           placedTrees.push({ pos: v3(hit.x, hit.y, hit.z), scale: 1, rot: { x: 0, y: hash01(hit.x * 0.11 + hit.z * 0.17) * Math.PI * 2, z: 0 } });
-          bumpSceneVersion();
+          cached = null;
           syncSelectedUI();
           return;
         }
@@ -10174,7 +9813,7 @@
           clearPropSelection();
           const seed = hash01(hit.x * 0.173 + hit.z * 0.319 + Date.now() * 0.0001);
           placedBoulders.push({ pos: v3(hit.x, hit.y, hit.z), scale: 1, seed, rot: { x: 0, y: seed * Math.PI * 2, z: 0 } });
-          bumpSceneVersion();
+          cached = null;
           syncSelectedUI();
           return;
         }
@@ -10188,7 +9827,7 @@
           clearPropSelection();
           placedFences.push({ a: v3(fencePlaceStart.x, fencePlaceStart.y, fencePlaceStart.z), b: v3(hit.x, hit.y, hit.z) });
           fencePlaceStart = v3(hit.x, hit.y, hit.z); // chain placement
-          bumpSceneVersion();
+          cached = null;
           syncSelectedUI();
         }
         return;
@@ -10327,7 +9966,7 @@
   window.addEventListener('mouseup', () => {
     if (bezier3DDrag) {
       bezier3DDrag = null;
-      bumpSceneVersion();
+      cached = null;
     }
     if (gizmo.active) {
       gizmo.active = false;
@@ -10337,7 +9976,7 @@
       gizmo.startProp = null;
       gizmo.startSel = null;
       gizmoGhost = null;
-      bumpSceneVersion();
+      cached = null;
     }
     if (isLookL && !lmbMoved && pickOnRelease >= 0) {
       selectOnly(pickOnRelease);
@@ -10378,10 +10017,6 @@
 
   // ---------- 2D render ----------
   function render2D() {
-    if (editCard.classList.contains('hidden')) {
-      requestAnimationFrame(render2D);
-      return;
-    }
     const r = editWrap.getBoundingClientRect();
     const w = r.width, h = r.height;
     const s = num('isoScale');
@@ -10584,10 +10219,9 @@
       }
     };
 
-    const overlayData = getOverlay2DData();
-    const net = overlayData.net;
-    const netDesc = overlayData.netDesc;
-    const mathReport = overlayData.mathReport;
+    const net = sampleRoadNetwork();
+    const netDesc = buildRoadNetworkDescriptor(net);
+    const mathReport = getMathConformityReportCached(net, netDesc);
     syncMathConformityUI(mathReport);
     const clsColor = { local: '#79c87a', collector: '#78aaff', arterial: '#ffd36e', freeway: '#ff9b6a', ramp: '#d2b2ff' };
     if (net.main.length > 1) {
@@ -10861,7 +10495,7 @@
           ySplitTool.startIdx = idx;
           ySplitTool.action = 'split';
           syncSelectedUI();
-          bumpSceneVersion();
+          cached = null;
           return;
         }
         ySplitTool.phase = 1;
@@ -10882,7 +10516,7 @@
         }
         ySplitTool = { phase: 0, startIdx: -1, action: 'split' };
         syncSelectedUI();
-        bumpSceneVersion();
+        cached = null;
       }
       return;
     }
@@ -10901,7 +10535,7 @@
         joinSection(joinTool.startIdx, hitPoint);
         joinTool = { phase: 0, startIdx: -1 };
         syncSelectedUI();
-        bumpSceneVersion();
+        cached = null;
       }
       return;
     }
@@ -10937,7 +10571,7 @@
         roundTool = { phase: 0, startIdx: -1, center: null, radius: 0, dir: 1, isSizing: false, previewExit: null };
         setTool('draw');
         syncSelectedUI();
-        bumpSceneVersion();
+        cached = null;
       }
       return;
     }
@@ -10974,7 +10608,7 @@
         remapSplitEndsForSplice(hitPoint, 1, 0);
         selectOnly(-1);
         syncSelectedUI();
-        bumpSceneVersion();
+        cached = null;
       } else {
         const hitBranchCurve = nearestBranchCurveHitScreen(sx, sy, org, s, 10);
         if (hitBranchCurve) {
@@ -10984,7 +10618,7 @@
           selectedBranch = null;
           selectedBranchSet.clear();
           syncSelectedUI();
-          bumpSceneVersion();
+          cached = null;
         }
       }
       return;
@@ -11006,7 +10640,7 @@
           const didJoin = joinSection(anchorIdx, hitPoint);
           if (didJoin) {
             setDrawAnchor(selected >= 0 ? selected : hitPoint);
-            bumpSceneVersion();
+            cached = null;
           } else {
             selectOnly(hitPoint);
             setDrawAnchor(hitPoint);
@@ -11076,7 +10710,7 @@
         }
       }
       syncSelectedUI();
-      bumpSceneVersion();
+      cached = null;
     }
   });
 
@@ -11131,7 +10765,7 @@
         p.pos.x = sp.x;
         p.pos.z = sp.z;
       }
-      bumpSceneVersion();
+      cached = null;
       return;
     }
 
@@ -11153,7 +10787,7 @@
           mid.x = sp.x;
           mid.z = sp.z;
         }
-        bumpSceneVersion();
+        cached = null;
       }
       return;
     }
@@ -11175,7 +10809,7 @@
         rotateOnly: e.altKey,
         breakMirror: e.shiftKey,
       });
-      bumpSceneVersion();
+      cached = null;
     }
   });
 
@@ -11198,13 +10832,13 @@
     if (e.altKey && (selectedBranchSet.size || selectedBranch)) {
       applyHeightDeltaToBranchSelection(-e.deltaY * 0.01);
       syncSelectedUI();
-      bumpSceneVersion();
+      cached = null;
       return;
     }
     if (e.altKey && (selectedSet.size || (selected >= 0 && points[selected]))) {
       applyHeightDeltaToMainSelection(-e.deltaY * 0.01);
       syncSelectedUI();
-      bumpSceneVersion();
+      cached = null;
       return;
     }
     const zoomFactor = Math.exp(-e.deltaY * 0.0015);

@@ -1,24 +1,33 @@
 # KARTMAKER ARGH
 
-Single-file Mario Kart/F1-style track maker with:
-- 2D isometric spline editing
-- 3D offline preview
-- procedural track generation
-- terrain + theme dressing
-- OBJ export for Blender/Rhino and similar tools
+![Platform](https://img.shields.io/badge/Platform-Web-blue)
+![Stack](https://img.shields.io/badge/Stack-HTML%20%7C%20CSS%20%7C%20JavaScript-1f6feb)
+![Rendering](https://img.shields.io/badge/Rendering-2D%20%2B%203D-orange)
+![Export](https://img.shields.io/badge/Export-OBJ%20%2B%20MTL-success)
+![Build](https://img.shields.io/badge/Build-None-important)
 
-The app runs fully in-browser from `index.html` (no external CDN or build step).
+Single-file browser app for building Mario Kart / F1-style tracks with 2D spline editing, 3D preview, procedural generation, and OBJ export with basic materials setup.
 
-## Project Files
+## Gallery
 
-- `index.html`: main app
-- `index - Copy.html`: backup/alternate copy
+![Workspace](Screenshots/1.png)
+![Road Editing](Screenshots/3.png)
+![3D Preview](Screenshots/7.png)
+![Advanced Scene](Screenshots/9.png)
+
+## Why This Repo
+
+- Fast in-browser workflow: draw in 2D, inspect in 3D, export immediately
+- Advanced road tooling: Join, Y Split, Roundabout, lane/direction metadata
+- Procedural generation with interchange templates and terrain/theming
+- No build step, no external runtime dependency required
 
 ## Quick Start
 
-1. Open `index.html` in a modern desktop browser (Chrome/Edge/Firefox).
-2. Click `Generate Track` for a starting layout, or draw your own in 2D.
-3. Refine shape/height/bank, then click `Export OBJ`.
+1. Open `index.html` in Chrome, Edge, or Firefox.
+2. Click **Generate Track** or draw manually.
+3. Refine geometry and branching.
+4. Click **Export OBJ**.
 
 Optional local server:
 
@@ -28,110 +37,39 @@ python -m http.server 8080
 
 Then open `http://localhost:8080`.
 
-## Core Workflow
+## Key Features
 
-1. Layout:
-- Use `Draw`, `Move`, `Erase` in the 2D panel.
-- Use `Join`, `Y Split`, `Roundabout` for branching track structure.
+- 2D cubic Bezier road editing
+- 3D offline software preview
+- Road class, lane, and direction controls
+- Lane-level network descriptor output
+- Junction metadata and routing hooks
+- Terrain, support styles, and prop placement/editing
+- OBJ + MTL export
 
-2. Shape:
-- Select points and edit `Height (Y)` + `Bank (deg)`.
-- Adjust Bezier handles in 2D or 3D for corner flow.
+## Repo Layout
 
-3. Generate details:
-- Tune `Road width`, `Thickness`, `Spline smoothness`, `Path detail`.
-- Enable/tune `Terrain` and `Theme`.
+- `index.html` - full application
+- `README.md` - documentation
+- `Screenshots/` - repo gallery images
 
-4. Place props:
-- Switch to `Fence Place` or `Tree Place`, then click terrain in 3D.
+## Git
 
-5. Export:
-- Click `Export OBJ` to download mesh output.
-
-## Controls and Shortcuts
-
-### 2D Editor
-
-- Click: add/select points
-- Drag: move selected point(s)
-- `Shift`/`Ctrl` + click: multi-select
-- `Space` + drag or `Shift` + drag: pan
-- Mouse wheel: zoom
-- `Alt` + wheel: adjust selected point height
-
-### Bezier / Node Types
-
-- Drag handle squares to shape curve
-- `Alt` + drag handle: rotate-only (keep handle length)
-- `1` = Smooth, `2` = Aligned, `3` = Corner
-
-### 3D View
-
-- `WASD` + `Q/Z`: move camera
-- RMB or LMB drag: look
-- MMB drag: pan
-- `Alt` + RMB drag: orbit selected point
-- RMB + wheel: camera speed up/down
-- MMB click: reset camera speed
-- `F`: focus selected point
-- View button cycles: `Render` / `Normal` / `Wireframe`
-
-### Editing Hotkeys
-
-- `Ctrl/Cmd + Z`: Undo
-- `Ctrl/Cmd + Shift + Z` or `Ctrl/Cmd + Y`: Redo
-- `Delete`/`Backspace`: delete selected points/branch mids
-- `Esc`: cancel fence segment start (in fence mode), close help modal
-
-## Save / Load / Autosave
-
-- `Save`: downloads `*.mktrack.json` and updates local browser autosave.
-- `Load`: normal click loads a project file; `Shift` + click restores local autosave.
-- Autosave runs periodically and on page unload.
-
-## Export Details
-
-`Export OBJ` includes:
-- road top mesh
-- optional road side walls
-- generated terrain (if enabled)
-- theme meshes (curbs/shoulders)
-- placed props (fences/trees)
-
-If browser download is blocked, use `Show OBJ` and copy text into a `.obj` file manually.
-
-## GitHub Setup Guide
-
-### 1) Create repository and push
+Initial push:
 
 ```bash
 git init
-git add index.html "index - Copy.html" README.md
-git commit -m "Add KARTMAKER ARGH app and docs"
+git add index.html README.md Screenshots
+git commit -m "Initial KARTMAKER ARGH commit"
 git branch -M main
-git remote add origin https://github.com/<your-user>/<your-repo>.git
+git remote add origin https://github.com/<user>/<repo>.git
 git push -u origin main
 ```
 
-### 2) Enable GitHub Pages (optional web hosting)
-
-1. Open your repo on GitHub.
-2. Go to `Settings` -> `Pages`.
-3. Under "Build and deployment", set Source to `Deploy from a branch`.
-4. Set Branch to `main` and Folder to `/ (root)`.
-5. Save.
-6. After deployment, open `https://<your-user>.github.io/<your-repo>/`.
-
-### 3) Typical update flow
+Update flow:
 
 ```bash
 git add .
-git commit -m "Describe your changes"
+git commit -m "Describe your change"
 git push
 ```
-
-## Tips
-
-- Keep `Track name` clean; it is used as exported OBJ filename.
-- Leave `Road iso snap` enabled for cleaner, grid-aligned edits.
-- Raise `Path detail` and `Terrain detail` only as needed to keep performance smooth while editing.
