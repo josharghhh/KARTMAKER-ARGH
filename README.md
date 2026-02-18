@@ -46,6 +46,31 @@ Then open `http://localhost:8080`.
 - Junction metadata and routing hooks
 - Terrain, support styles, and prop placement/editing
 - OBJ + MTL export
+- Enfusion terrain package export (`.r16` heightmap + road/island masks + metadata JSON)
+
+## Arma Reforger / Enfusion Terrain Workflow
+
+The tool can now export a terrain package tuned for Enfusion world setup and navmesh rebuild workflows:
+
+- **`<track>_terrain_h16le.r16`**: 16-bit little-endian RAW heightmap (for terrain import).
+- **`<track>_road_mask.pgm`**: grayscale mask for road corridor painting/material assignment.
+- **`<track>_island_mask.pgm`**: grayscale island edge falloff mask for coast/cliff blending.
+- **`<track>_terrain_enfusion.json`**: origin, spacing, height range, and import notes.
+
+Recommended in Enfusion (based on official terrain workflow docs):
+
+1. Import RAW heightmap with matching sample dimensions.
+2. Set terrain world scale from `cellSizeX`, `cellSizeZ`, and origin values in JSON.
+3. Use road mask to paint driveable surface and navmesh-friendly road margins.
+4. Rebuild navmesh after terrain and road surface layers are finalized.
+
+The **Terrain** panel also includes island shaping controls:
+
+- Island offset from track footprint
+- Island falloff width (coastline/cliff band)
+- Island drop depth below track base level
+
+This produces an island-like topo silhouette while preserving road clearance and bridge safety.
 
 ## Repo Layout
 
