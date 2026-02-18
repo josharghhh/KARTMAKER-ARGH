@@ -380,6 +380,16 @@
       <label>Terrain detail (anti low-poly)</label>
       <input id="terrainDetail" type="range" min="0" max="1" step="0.01" value="0.62"/>
       <div class="small"><span id="terrainDetailVal">0.62</span></div>
+      <div class="toggle"><label style="margin:0">Island edge shaping</label><input id="terrainIsland" type="checkbox" checked/></div>
+      <label>Island offset from track (m)</label>
+      <input id="terrainIslandOffset" type="range" min="4" max="140" step="1" value="34"/>
+      <div class="small"><span id="terrainIslandOffsetVal">34</span></div>
+      <label>Island coast falloff width (m)</label>
+      <input id="terrainIslandFalloff" type="range" min="4" max="140" step="1" value="30"/>
+      <div class="small"><span id="terrainIslandFalloffVal">30</span></div>
+      <label>Island coast drop below track base (m)</label>
+      <input id="terrainIslandDrop" type="range" min="0.2" max="40" step="0.2" value="9.4"/>
+      <div class="small"><span id="terrainIslandDropVal">9.4</span></div>
       <label>Terrain presets</label>
       <div class="row">
         <button id="terrainPresetClean" type="button">Kart clean</button>
@@ -531,6 +541,7 @@
   <button id="resetBtn" type="button">Reset</button>
   <button id="clearBtn" type="button">Clear</button>
   <button id="exportBtn" type="button" class="primary">Export OBJ</button>
+  <button id="exportTerrainBtn" type="button">Export Terrain (Enfusion)</button>
   <input id="loadProjectFile" type="file" accept=".json,.mktrack,.mktrack.json,application/json" style="display:none"/>
 </div>
 
@@ -2115,7 +2126,11 @@
     const cliffHeight = Math.max(0.5, opts.cliffHeight || 4);
     const kartStyle = clamp(Number.isFinite(opts.kartStyle) ? opts.kartStyle : 0.78, 0, 1);
     const detail = clamp(Number.isFinite(opts.detail) ? opts.detail : 0.62, 0, 1);
-    const margin = Math.max(22, roadWidth * 7.5);
+    const islandEnabled = !!opts.islandEnabled;
+    const islandOffset = Math.max(0, Number.isFinite(opts.islandOffset) ? opts.islandOffset : 28);
+    const islandFalloff = Math.max(2, Number.isFinite(opts.islandFalloff) ? opts.islandFalloff : 24);
+    const islandDrop = Math.max(0, Number.isFinite(opts.islandDrop) ? opts.islandDrop : 8);
+    const margin = Math.max(22, roadWidth * 7.5, islandEnabled ? (islandOffset + islandFalloff + roadWidth * 2.5 + 12) : 0);
     const cellBase = 2.35 - 0.55 * kartStyle;
     const cell = clamp(cellBase * (1.18 - detail * 0.58), 0.85, 2.6);
 
@@ -2156,6 +2171,8 @@
     };
     const followRoad = clamp(Number.isFinite(opts.followRoad) ? opts.followRoad : 0.88, 0, 1);
     const shoulderBevelDepth = 0.16 + shoulderWidth * 0.08;
+    const islandInner = supportEdge + islandOffset;
+    const islandOuter = islandInner + islandFalloff;
 
     const terrain = { name: 'terrain_cliffs', verts: [], uvs: [], faces: [] };
     const smoothstep = (a, b, x) => {
@@ -2248,6 +2265,8 @@
     const capField = new Float64Array(nx * nz);
     const dField = new Float64Array(nx * nz);
     const boostField = new Float64Array(nx * nz);
+    const roadMaskField = new Float32Array(nx * nz);
+    const islandMaskField = new Float32Array(nx * nz);
 
     for (let iz = 0; iz < nz; iz++) {
       for (let ix = 0; ix < nx; ix++) {
@@ -2441,11 +2460,22 @@
           if (pCap < hardCap) hardCap = pCap;
         }
         if (y > hardCap) y = hardCap;
+        let islandMask = 0;
+        if (islandEnabled) {
+          islandMask = smoothstep(islandInner, islandOuter, dForShape);
+          if (islandMask > 1e-5) {
+            const coastNoise = noise2(x * 0.18 - 11.3, z * 0.21 + 7.7) * 0.5 + noise2(x * 0.08 + 3.7, z * 0.11 - 4.2) * 0.5;
+            const coastTarget = baseY - islandDrop - cliffHeight * (0.08 + islandMask * 0.28) - roughness * 0.22 * coastNoise;
+            y = y * (1 - islandMask) + coastTarget * islandMask;
+          }
+        }
         const idx = iz * nx + ix;
         hField[idx] = y;
         capField[idx] = hardCap;
         dField[idx] = d1;
         boostField[idx] = Math.max(crossingBoost, junctionBoost * 0.8);
+        roadMaskField[idx] = clamp(1 - smoothstep(halfRoad * 0.72, supportEdge + shoulderWidth * 0.68, d1), 0, 1);
+        islandMaskField[idx] = islandMask;
       }
     }
 
@@ -2516,7 +2546,23 @@
         }
       }
     }
+    let hMin = +1e9, hMax = -1e9;
+    for (let i = 0; i < hField.length; i++) {
+      const h = hField[i];
+      if (h < hMin) hMin = h;
+      if (h > hMax) hMax = h;
+    }
     terrain._grid = { minX, minZ, sx, sz, nx, nz };
+    terrain._meta = {
+      heightMin: hMin,
+      heightMax: hMax,
+      roadMask: roadMaskField,
+      islandMask: islandMaskField,
+      islandEnabled,
+      islandOffset,
+      islandFalloff,
+      islandDrop,
+    };
     return terrain;
   }
 
@@ -3677,6 +3723,113 @@
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+  }
+
+  function downloadBinary(filename, bytes, mime = 'application/octet-stream') {
+    const blob = new Blob([bytes], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function encodePortableGraymap(width, height, values) {
+    const header = `P5
+${width} ${height}
+255
+`;
+    const enc = new TextEncoder();
+    const headBytes = enc.encode(header);
+    const out = new Uint8Array(headBytes.length + values.length);
+    out.set(headBytes, 0);
+    out.set(values, headBytes.length);
+    return out;
+  }
+
+  function terrainOptsFromUi(networkRoadWidthMax) {
+    return {
+      roadWidth: networkRoadWidthMax,
+      roadThickness: num('roadThickness'),
+      shoulderWidth: chk('themeOn') ? num('themeGrass') : 1.8,
+      roadClearance: num('terrainClearance'),
+      followRoad: num('terrainFollow'),
+      detail: num('terrainDetail'),
+      roughness: num('terrainRough'),
+      cliffHeight: num('terrainCliff'),
+      islandEnabled: chk('terrainIsland'),
+      islandOffset: num('terrainIslandOffset'),
+      islandFalloff: num('terrainIslandFalloff'),
+      islandDrop: num('terrainIslandDrop'),
+    };
+  }
+
+  function exportTerrainForEnfusion(baseName, terrain) {
+    const grid = terrain?._grid;
+    const meta = terrain?._meta;
+    if (!grid || !meta) return false;
+    const n = grid.nx * grid.nz;
+    if (!n) return false;
+    const hMin = Number.isFinite(meta.heightMin) ? meta.heightMin : 0;
+    const hMax = Number.isFinite(meta.heightMax) ? meta.heightMax : 1;
+    const hSpan = Math.max(1e-5, hMax - hMin);
+    const h16 = new Uint16Array(n);
+    for (let i = 0; i < n; i++) {
+      const h = terrain.verts[i]?.y ?? hMin;
+      const t = clamp((h - hMin) / hSpan, 0, 1);
+      h16[i] = Math.round(t * 65535);
+    }
+    const hBytes = new Uint8Array(h16.buffer.slice(0));
+    downloadBinary(`${baseName}_terrain_h16le.r16`, hBytes);
+
+    const roadMask = new Uint8Array(n);
+    const islandMask = new Uint8Array(n);
+    const rm = meta.roadMask;
+    const im = meta.islandMask;
+    for (let i = 0; i < n; i++) {
+      roadMask[i] = Math.round(clamp(Number(rm?.[i] ?? 0), 0, 1) * 255);
+      islandMask[i] = Math.round(clamp(Number(im?.[i] ?? 0), 0, 1) * 255);
+    }
+    downloadBinary(`${baseName}_road_mask.pgm`, encodePortableGraymap(grid.nx, grid.nz, roadMask), 'image/x-portable-graymap');
+    downloadBinary(`${baseName}_island_mask.pgm`, encodePortableGraymap(grid.nx, grid.nz, islandMask), 'image/x-portable-graymap');
+
+    const exportMeta = {
+      format: 'kartmaker-enfusion-terrain-v1',
+      source: 'KARTMAKER ARGH',
+      heightmapFile: `${baseName}_terrain_h16le.r16`,
+      roadMaskFile: `${baseName}_road_mask.pgm`,
+      islandMaskFile: `${baseName}_island_mask.pgm`,
+      grid: {
+        widthSamples: grid.nx,
+        heightSamples: grid.nz,
+        cellSizeX: grid.sx,
+        cellSizeZ: grid.sz,
+        originX: grid.minX,
+        originZ: grid.minZ,
+      },
+      heights: {
+        min: hMin,
+        max: hMax,
+        span: hSpan,
+      },
+      island: {
+        enabled: !!meta.islandEnabled,
+        offset: Number(meta.islandOffset || 0),
+        falloff: Number(meta.islandFalloff || 0),
+        drop: Number(meta.islandDrop || 0),
+      },
+      reforgerNotes: [
+        'Import heightmap as 16-bit RAW little-endian.',
+        'Use grid cell size to match world scale in Enfusion terrain project.',
+        'Use road_mask.pgm to paint navmesh-safe road corridors and material masks before regenerating navmesh.',
+      ],
+    };
+    downloadText(`${baseName}_terrain_enfusion.json`, JSON.stringify(exportMeta, null, 2));
+    return true;
   }
 
   // ---------- DOM ----------
@@ -6991,6 +7144,9 @@
     $('terrainClearanceVal').textContent = num('terrainClearance').toFixed(2);
     $('terrainFollowVal').textContent = num('terrainFollow').toFixed(2);
     $('terrainDetailVal').textContent = num('terrainDetail').toFixed(2);
+    $('terrainIslandOffsetVal').textContent = String(Math.round(num('terrainIslandOffset')));
+    $('terrainIslandFalloffVal').textContent = String(Math.round(num('terrainIslandFalloff')));
+    $('terrainIslandDropVal').textContent = num('terrainIslandDrop').toFixed(1);
     $('themeGrassVal').textContent = num('themeGrass').toFixed(1);
     $('themeCurbVal').textContent = num('themeCurb').toFixed(2);
     $('themeFenceVal').textContent = num('themeFence').toFixed(2);
@@ -7014,18 +7170,30 @@
       $('terrainClearance').value = '0.34';
       $('terrainFollow').value = '0.84';
       $('terrainDetail').value = '0.78';
+      $('terrainIsland').checked = true;
+      $('terrainIslandOffset').value = '26';
+      $('terrainIslandFalloff').value = '20';
+      $('terrainIslandDrop').value = '6.2';
     } else if (kind === 'cliffs') {
       $('terrainRough').value = '3.3';
       $('terrainCliff').value = '10.8';
       $('terrainClearance').value = '0.44';
       $('terrainFollow').value = '0.82';
       $('terrainDetail').value = '0.58';
+      $('terrainIsland').checked = true;
+      $('terrainIslandOffset').value = '38';
+      $('terrainIslandFalloff').value = '42';
+      $('terrainIslandDrop').value = '13.5';
     } else if (kind === 'bridge') {
       $('terrainRough').value = '1.6';
       $('terrainCliff').value = '6.6';
       $('terrainClearance').value = '0.58';
       $('terrainFollow').value = '0.90';
       $('terrainDetail').value = '0.68';
+      $('terrainIsland').checked = true;
+      $('terrainIslandOffset').value = '44';
+      $('terrainIslandFalloff').value = '30';
+      $('terrainIslandDrop').value = '9.8';
       $('supportStyle').value = 'highway';
       $('bridgeMaterial').value = 'freeway';
     }
@@ -7073,6 +7241,10 @@
       terrainClearance: 0.44,
       terrainFollow: 0.90,
       terrainDetail: 0.66,
+      terrainIsland: true,
+      terrainIslandOffset: 34,
+      terrainIslandFalloff: 30,
+      terrainIslandDrop: 9.4,
       themeOn: true,
       themeGrass: 0.75,
       themeCurb: 0.08,
@@ -7093,7 +7265,7 @@
       else el.value = String(val);
     }
   }
-  ['grid','isoScale','roadWidth','roadThickness','subdiv','pathDetail','genRandomness','genScale','genLength','genCurves','genPointCap','genComboCount','genStraights','genFlow','genRoundExits','genCrossFreq','genModY','genModRound','genModCross','terrainOn','terrainRough','terrainCliff','terrainClearance','terrainFollow','terrainDetail','themeOn','themeGrass','themeCurb','themeFence','themeTrees','themeRocks','supportStyle','bridgeMaterial','closed','includeSides','showGrid','roadIsoSnap','roadSnapY','autoBank','autoBankStrength','autoBankMax','autoBankScale','mainRoadClass','mainRoadDir','mainLanesF','mainLanesR','newBranchClass','newBranchDir','newBranchLanesF','newBranchLanesR'].forEach(id => $(id).addEventListener('input', updateLabels));
+  ['grid','isoScale','roadWidth','roadThickness','subdiv','pathDetail','genRandomness','genScale','genLength','genCurves','genPointCap','genComboCount','genStraights','genFlow','genRoundExits','genCrossFreq','genModY','genModRound','genModCross','terrainOn','terrainRough','terrainCliff','terrainClearance','terrainFollow','terrainDetail','terrainIsland','terrainIslandOffset','terrainIslandFalloff','terrainIslandDrop','themeOn','themeGrass','themeCurb','themeFence','themeTrees','themeRocks','supportStyle','bridgeMaterial','closed','includeSides','showGrid','roadIsoSnap','roadSnapY','autoBank','autoBankStrength','autoBankMax','autoBankScale','mainRoadClass','mainRoadDir','mainLanesF','mainLanesR','newBranchClass','newBranchDir','newBranchLanesF','newBranchLanesR'].forEach(id => $(id).addEventListener('input', updateLabels));
   $('genStyle').addEventListener('change', () => {
     if ($('genStyle').value === 'f1long') {
       if (num('genLength') < 1.8) $('genLength').value = '1.80';
@@ -8307,16 +8479,7 @@
       thickness: num('roadThickness'),
     });
     const terrain = chk('terrainOn')
-      ? buildTerrainMesh(net.all, {
-        roadWidth: networkRoadWidthMax,
-        roadThickness: num('roadThickness'),
-        shoulderWidth: chk('themeOn') ? num('themeGrass') : 1.8,
-        roadClearance: num('terrainClearance'),
-        followRoad: num('terrainFollow'),
-        detail: num('terrainDetail'),
-        roughness: num('terrainRough'),
-        cliffHeight: num('terrainCliff'),
-      })
+      ? buildTerrainMesh(net.all, terrainOptsFromUi(networkRoadWidthMax))
       : null;
     const themeMain = buildThemeMeshes(net.main, mainRoad.frames, {
       enabled: chk('themeOn'),
@@ -8412,6 +8575,20 @@
       return;
     }
     try { downloadText(name + '.mtl', mtl); } catch {}
+  };
+
+  $('exportTerrainBtn').onclick = () => {
+    const scene = getMesh();
+    if (!scene?.terrain) {
+      showErr('No terrain mesh to export. Enable Terrain and generate a track first.');
+      return;
+    }
+    const name = (txt('trackName') || 'track').trim().replace(/[^a-z0-9._-]+/gi, '_') || 'track';
+    try {
+      exportTerrainForEnfusion(name, scene.terrain);
+    } catch (e) {
+      showErr('Terrain export failed: ' + String(e?.message || e));
+    }
   };
 
   // ---------- pro handle rules ----------
@@ -8512,16 +8689,7 @@
       thickness: num('roadThickness'),
     });
     const terrain = chk('terrainOn')
-      ? buildTerrainMesh(net.all, {
-        roadWidth: networkRoadWidthMax,
-        roadThickness: num('roadThickness'),
-        shoulderWidth: chk('themeOn') ? num('themeGrass') : 1.8,
-        roadClearance: num('terrainClearance'),
-        followRoad: num('terrainFollow'),
-        detail: num('terrainDetail'),
-        roughness: num('terrainRough'),
-        cliffHeight: num('terrainCliff'),
-      })
+      ? buildTerrainMesh(net.all, terrainOptsFromUi(networkRoadWidthMax))
       : null;
     const themeMain = buildThemeMeshes(net.main, mainRoad.frames, {
       enabled: chk('themeOn'),
