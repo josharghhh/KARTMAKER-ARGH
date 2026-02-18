@@ -557,7 +557,7 @@
       <div class="helpBlock"><b>Bezier / Node Types</b><p>Select a yellow or blue point to edit handles. Drag square handles to shape curvature. Alt-drag rotates handle without length change. Node types: Smooth mirrors angle+length, Aligned mirrors angle only, Corner is independent. Keys 1/2/3 switch node type.</p></div>
       <div class="helpBlock"><b>3D View + Gizmo</b><p>WASD + Q/Z moves camera. RMB or LMB look, MMB pan. Alt+RMB orbits selected point. Mouse wheel with RMB adjusts speed, MMB click resets speed. F focuses selected. All road tools can be used in 3D via point/curve picking. Drag yellow gizmo center/axes to move points. Press G for Blender-style free move on selected road node. Shift = fine move, Ctrl = force snap when snap is off, Alt = bypass snap. In Prop Edit mode use W/E/R to switch Move/Rotate/Scale gizmo.</p></div>
       <div class="helpBlock"><b>Generation + Terrain</b><p>Generate Track builds templates and modifiers. Closed loop now stitches final segment back to start in mesh. Terrain detail increases terrain mesh resolution and smoothing to reduce sharp faceting on cliff transitions and shoulders.</p></div>
-      <div class="helpBlock"><b>Bridge Styles + Export</b><p>Scenery panel has one-click bridge presets: Highway, Wood (Mario Kart planks), and Mixed city materials. Support styles include highway columns, concrete piers, coaster trestles, cliff braces, and tree-style supports. Export OBJ writes road, sides, terrain, curbs, shoulders, bridges, supports, and placed props as manifold meshes where supported.</p></div>
+      <div class="helpBlock"><b>Bridge Styles + Export</b><p>Scenery panel has one-click bridge presets: Highway, Wood (Mario Kart planks), and Mixed city materials. Support styles include highway columns, concrete piers, coaster trestles, cliff braces, and tree-style supports. Export OBJ writes road, sides, terrain, curbs, shoulders, bridges, supports, and placed props as manifold meshes where supported. Export FBX (Enfusion) writes visual + collision helper meshes named for Enfusion Blender workflow.</p></div>
     </div>
     <div class="helpActions">
       <button id="helpInlineToggle" type="button">Hide Inline Helpers</button>
@@ -3710,6 +3710,144 @@
       vtOff += m.uvs.length;
     }
     return out;
+  }
+
+  function triSoupMesh(name, meshes) {
+    const out = { name, verts: [], faces: [] };
+    for (const mesh of meshes || []) {
+      if (!mesh?.verts?.length || !mesh?.faces?.length) continue;
+      for (const f of mesh.faces) {
+        const a = mesh.verts[f.a - 1];
+        const b = mesh.verts[f.b - 1];
+        const c = mesh.verts[f.c - 1];
+        if (!a || !b || !c) continue;
+        const ai = out.verts.push(v3(a.x, a.y, a.z)) - 1;
+        const bi = out.verts.push(v3(b.x, b.y, b.z)) - 1;
+        const ci = out.verts.push(v3(c.x, c.y, c.z)) - 1;
+        out.faces.push([ai, bi, ci]);
+      }
+    }
+    return out;
+  }
+
+  function buildEnfusionFbxModels(scene) {
+    const visuals = [
+      scene.roadTop,
+      ...(scene.roadSides ? [scene.roadSides] : []),
+      ...(scene.roadBottom ? [scene.roadBottom] : []),
+      ...(scene.terrain ? [scene.terrain] : []),
+      ...((scene.theme || []).map((t) => t?.mesh).filter(Boolean)),
+      ...((scene.placed || []).map((t) => t?.mesh).filter(Boolean)),
+    ];
+    const collisionGeo = [
+      scene.roadTop,
+      ...(scene.roadSides ? [scene.roadSides] : []),
+      ...(scene.roadBottom ? [scene.roadBottom] : []),
+      ...((scene.theme || []).map((t) => t?.mesh).filter(Boolean)),
+    ];
+    const roadway = [scene.roadTop].filter(Boolean);
+    return [
+      triSoupMesh('VIS_Main_LOD0', visuals),
+      triSoupMesh('GEO_Collision', collisionGeo),
+      triSoupMesh('ROADWAY_Collision', roadway),
+    ].filter((m) => m.verts.length && m.faces.length);
+  }
+
+  function meshesToFbxAscii(models, opts = {}) {
+    const creator = String(opts.creator || 'KARTMAKER ARGH');
+    const now = new Date();
+    const pad2 = (v) => String(v).padStart(2, '0');
+    const geomChunks = [];
+    const modelChunks = [];
+    const connChunks = [];
+    let geomId = 900000;
+    let modelId = 950000;
+
+    for (const m of models || []) {
+      if (!m?.verts?.length || !m?.faces?.length) continue;
+      const gid = geomId++;
+      const mid = modelId++;
+      const verts = [];
+      const polys = [];
+      for (const v of m.verts) {
+        verts.push(Number(v.x || 0).toFixed(6), Number(v.y || 0).toFixed(6), Number(v.z || 0).toFixed(6));
+      }
+      for (const f of m.faces) {
+        polys.push(String(f[0]), String(f[1]), String(-(f[2] + 1)));
+      }
+      geomChunks.push(`
+\t\tGeometry: ${gid}, \"Geometry::${m.name}\", \"Mesh\" {
+\t\t\tVertices: *${verts.length} {
+\t\t\t\ta: ${verts.join(',')}
+\t\t\t}
+\t\t\tPolygonVertexIndex: *${polys.length} {
+\t\t\t\ta: ${polys.join(',')}
+\t\t\t}
+\t\t\tGeometryVersion: 124
+\t\t}`);
+      modelChunks.push(`
+\t\tModel: ${mid}, \"Model::${m.name}\", \"Mesh\" {
+\t\t\tVersion: 232
+\t\t\tProperties70:  {
+\t\t\t\tP: \"InheritType\", \"enum\", \"\",\"\",1
+\t\t\t\tP: \"Lcl Translation\", \"Lcl Translation\", \"\",\"A\",0,0,0
+\t\t\t\tP: \"Lcl Rotation\", \"Lcl Rotation\", \"\",\"A\",0,0,0
+\t\t\t\tP: \"Lcl Scaling\", \"Lcl Scaling\", \"\",\"A\",1,1,1
+\t\t\t}
+\t\t\tShading: T
+\t\t\tCulling: \"CullingOff\"
+\t\t}`);
+      connChunks.push(`
+\t\tC: \"OO\",${gid},${mid}`);
+      connChunks.push(`
+\t\tC: \"OO\",${mid},0`);
+    }
+    if (!geomChunks.length) return '';
+
+    return `; FBX 7.4.0 project file
+; Created by ${creator}
+FBXHeaderExtension:  {
+\tFBXHeaderVersion: 1003
+\tFBXVersion: 7400
+\tCreationTimeStamp:  {
+\t\tVersion: 1000
+\t\tYear: ${now.getUTCFullYear()}
+\t\tMonth: ${pad2(now.getUTCMonth() + 1)}
+\t\tDay: ${pad2(now.getUTCDate())}
+\t\tHour: ${pad2(now.getUTCHours())}
+\t\tMinute: ${pad2(now.getUTCMinutes())}
+\t\tSecond: ${pad2(now.getUTCSeconds())}
+\t\tMillisecond: 0
+\t}
+\tCreator: \"${creator}\"
+}
+GlobalSettings:  {
+\tVersion: 1000
+\tProperties70:  {
+\t\tP: \"UpAxis\", \"int\", \"Integer\", \"\",1
+\t\tP: \"UpAxisSign\", \"int\", \"Integer\", \"\",1
+\t\tP: \"FrontAxis\", \"int\", \"Integer\", \"\",2
+\t\tP: \"FrontAxisSign\", \"int\", \"Integer\", \"\",1
+\t\tP: \"CoordAxis\", \"int\", \"Integer\", \"\",0
+\t\tP: \"CoordAxisSign\", \"int\", \"Integer\", \"\",1
+\t\tP: \"UnitScaleFactor\", \"double\", \"Number\", \"\",1
+\t}
+}
+Definitions:  {
+\tVersion: 100
+\tCount: 2
+\tObjectType: \"Geometry\" {
+\t\tCount: ${geomChunks.length}
+\t}
+\tObjectType: \"Model\" {
+\t\tCount: ${modelChunks.length}
+\t}
+}
+Objects:  {${geomChunks.join('')}${modelChunks.join('')}
+}
+Connections:  {${connChunks.join('')}
+}
+`;
   }
 
   function downloadText(filename, text) {
@@ -11390,6 +11528,7 @@ ${width} ${height}
 
   // tiny sanity checks
   console.assert(typeof meshesToOBJ === 'function', 'meshesToOBJ exists');
+  console.assert(typeof meshesToFbxAscii === 'function', 'meshesToFbxAscii exists');
   console.assert(Array.isArray(points), 'points is array');
 })();
 </script>

@@ -27,7 +27,7 @@ Single-file browser app for building Mario Kart / F1-style tracks with 2D spline
 1. Open `index.html` in Chrome, Edge, or Firefox.
 2. Click **Generate Track** or draw manually.
 3. Refine geometry and branching.
-4. Click **Export OBJ**.
+4. Click **Export OBJ** or **Export FBX (Enfusion)**.
 
 Optional local server:
 
