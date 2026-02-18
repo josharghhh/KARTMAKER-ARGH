@@ -46,7 +46,6 @@ Then open `http://localhost:8080`.
 - Junction metadata and routing hooks
 - Terrain, support styles, and prop placement/editing
 - OBJ + MTL export
-- FBX (ASCII) export with Enfusion collision helper objects (`VIS_Main_LOD0`, `GEO_Collision`, `ROADWAY_Collision`)
 - Enfusion terrain package export (`.r16` heightmap + road/island masks + metadata JSON)
 
 ## Arma Reforger / Enfusion Terrain Workflow
@@ -72,25 +71,6 @@ The **Terrain** panel also includes island shaping controls:
 - Island drop depth below track base level
 
 This produces an island-like topo silhouette while preserving road clearance and bridge safety.
-
-## Enfusion FBX Export
-
-Use **Export FBX (Enfusion)** to generate:
-
-- `*_enfusion.fbx` (ASCII FBX 7.4)
-- `*_enfusion_fbx_notes.txt`
-
-Included FBX object names are prepared for Enfusion Blender Tools handoff:
-
-- `VIS_Main_LOD0` (visual mesh)
-- `GEO_Collision` (geometry collision helper)
-- `ROADWAY_Collision` (roadway collision helper)
-
-Recommended flow:
-
-1. Import FBX in Blender.
-2. Use Enfusion Blender Tools to assign these objects to your exact LOD/collision setup.
-3. Export/package through your standard Enfusion asset pipeline.
 
 ## Repo Layout
 

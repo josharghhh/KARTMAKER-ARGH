@@ -541,7 +541,6 @@
   <button id="resetBtn" type="button">Reset</button>
   <button id="clearBtn" type="button">Clear</button>
   <button id="exportBtn" type="button" class="primary">Export OBJ</button>
-  <button id="exportFbxBtn" type="button">Export FBX (Enfusion)</button>
   <button id="exportTerrainBtn" type="button">Export Terrain (Enfusion)</button>
   <input id="loadProjectFile" type="file" accept=".json,.mktrack,.mktrack.json,application/json" style="display:none"/>
 </div>
@@ -8714,35 +8713,6 @@ ${width} ${height}
       return;
     }
     try { downloadText(name + '.mtl', mtl); } catch {}
-  };
-
-  $('exportFbxBtn').onclick = () => {
-    const scene = getMesh();
-    if (!scene?.roadTop) {
-      showErr('No mesh to export. Generate or draw a track first.');
-      return;
-    }
-    const name = (txt('trackName') || 'track').trim().replace(/[^a-z0-9._-]+/gi, '_') || 'track';
-    try {
-      const models = buildEnfusionFbxModels(scene);
-      const fbx = meshesToFbxAscii(models, { creator: 'KARTMAKER ARGH Enfusion FBX' });
-      if (!fbx) throw new Error('FBX build produced no geometry.');
-      downloadText(name + '_enfusion.fbx', fbx);
-      const note = [
-        'KARTMAKER Enfusion FBX export',
-        '',
-        'Included objects:',
-        '- VIS_Main_LOD0 : visual render mesh',
-        '- GEO_Collision : geometry collision helper mesh',
-        '- ROADWAY_Collision : roadway collision helper mesh',
-        '',
-        'Next step:',
-        'Import this FBX in Blender and use Enfusion Blender Tools to map these objects to your exact Enfusion LOD setup before packing.',
-      ].join('\n');
-      downloadText(name + '_enfusion_fbx_notes.txt', note);
-    } catch (e) {
-      showErr('FBX export failed: ' + String(e?.message || e));
-    }
   };
 
   $('exportTerrainBtn').onclick = () => {
